@@ -1,15 +1,10 @@
 import pandas as pd
-#from pathlib import Path
-
-##need to create a function that will extract text from file and return it as an xml docuemnt ready for analysis
-
-##def extract_text_to_xml(file_path):
-##    #extract text and converting to XML
-##    pass
 
 input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-v310.csv"
 
-sample = pd.read_csv(input_csv, nrows=5)
+all_speeches = pd.read_csv(input_csv)
+all_speeches_2016 = all_speeches[all_speeches["year"] == 2016] #use only 2016 data to begin with
+all_speeches_2016.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016.csv", index=False)
 
-#print(sample)
-print(list(sample.columns))
+#print(f"Number of speeches in 2016: {len(all_speeches_2016)}")
+print(all_speeches_2016["date"].min(), all_speeches_2016["date"].max())
