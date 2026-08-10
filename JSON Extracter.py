@@ -11,5 +11,8 @@ speaker_roles["date"] = speaker_roles["date"].astype(str).str[:10] #make sure da
 
 speaker_roles = speaker_roles[["mnis_id", "date", "role_name"]]
 
-print(speaker_roles.sample(5))
+speeches_join = speeches.merge(speaker_roles, on=["mnis_id", "date"], how="left") #join both
+speeches_join.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016-updated.csv", index=False)
+
+#print(speaker_roles.sample(5))
 #print(speaker_roles.head())
