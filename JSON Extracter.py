@@ -7,34 +7,48 @@ opposition_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\oppositio
 
 #========speaker_roles=============
 speaker_roles = speaker_roles.explode("parliamentary_posts") #everyone with multiple roles gets a new row for each role
-speaker_roles["role_name"] = speaker_roles["parliamentary_posts"].str["parl_post_name"] #create dictionary on the parl_post_name
+speaker_roles["speaker_role_name"] = speaker_roles["parliamentary_posts"].str["parl_post_name"] #create dictionary on the parl_post_name
 
 speaker_roles["mnis_id"] = speaker_roles["mnis_id"].astype(str) #make sure mnis_id is a string so it matches the speeches df
 speaker_roles["date"] = speaker_roles["date"].astype(str).str[:10] #make sure date is a string so it matches the speeches df, keep only date and not time
 
-speaker_roles = speaker_roles[["mnis_id", "date", "role_name"]]
+speaker_roles = speaker_roles[["mnis_id", "date", "speaker_role_name"]]
+
+#speaker_roles = speaker_roles.groupby(["mnis_id", "date"])["speaker_role_name"].agg("; ".join).reset_index() #prevents duplicates by adding mtuliple roles into one cell seperated by comma. Reset index
 
 #==========government_roles=============
 
 government_roles = government_roles.explode("government_posts") #everyone with multiple roles gets a new row for each role
-government_roles["role_name"] = government_roles["government_posts"].str["gov_post_name"] #create dictionary on the gov_post_name
+government_roles["gov_role_name"] = government_roles["government_posts"].str["gov_post_name"] #create dictionary on the gov_post_name
 
 government_roles["mnis_id"] = government_roles["mnis_id"].astype(str) #make sure mnis_id is a string so it matches the speeches df
 government_roles["date"] = government_roles["date"].astype(str).str[:10] #make sure date is a string so it matches the speeches df, keep only date and not time
 
-government_roles = government_roles[["mnis_id", "date", "role_name"]]
+government_roles = government_roles[["mnis_id", "date", "gov_role_name"]]
+
+#government_roles = government_roles.groupby(["mnis_id", "date"])["gov_role_name"].agg("; ".join).reset_index()
 
 #==========opposition_roles=============
 
 opposition_roles = opposition_roles.explode("opposition_posts") #everyone with multiple roles gets a new row for each role
-opposition_roles["role_name"] = opposition_roles["opposition_posts"].str["opp_post_name"] #create dictionary on the opp_post_name
+opposition_roles["opp_role_name"] = opposition_roles["opposition_posts"].str["oppo_post_name"] #create dictionary on the opp_post_name
 
 opposition_roles["mnis_id"] = opposition_roles["mnis_id"].astype(str) #make sure mnis_id is a string so it matches the speeches df
 opposition_roles["date"] = opposition_roles["date"].astype(str).str[:10] #make sure date is a string so it matches the speeches df, keep only date and not time
 
-opposition_roles = opposition_roles[["mnis_id", "date", "role_name"]]
+opposition_roles = opposition_roles[["mnis_id", "date", "opp_role_name"]]
+
+#opposition_roles = opposition_roles.groupby(["mnis_id", "date"])["opp_role_name"].agg("; ".join).reset_index()
 
 #==========join_all==============
+
+opposition_roles = opposition_roles[["mnis_id", "date", "opp_role_name"]]
+
+# --- diagnostic ---
+print(len(opposition_roles), "total rows")
+print(opposition_roles["opp_role_name"].isna().sum(), "with empty role name")
+print(opposition_roles[opposition_roles["opp_role_name"].isna()].head(10))
+# --- end diagnostic ---
 
 speeches_join = speeches.merge(speaker_roles, on=["mnis_id", "date"], how="left") #join both
 speeches_join = speeches_join.merge(government_roles, on=["mnis_id", "date"], how="left") #join both
