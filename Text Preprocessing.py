@@ -9,7 +9,7 @@ speeches = df['speech'].fillna('').astype(str).tolist() #fillna needed bc of iss
 
 tokenised_speeches = [] 
 
-for speech in nlp.pipe(speeches, batch_size=200): #batched approach is quicker
+for speech in nlp.pipe(speeches, batch_size=500): #batched approach is quicker
     lemmas = [token.lemma_ for token in speech
             if not token.is_punct #remove punctuation
             and not token.is_space # remove whitespace
