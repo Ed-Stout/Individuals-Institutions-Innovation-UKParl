@@ -5,7 +5,7 @@ from pathlib import Path
 
 speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\Hansard_Dataset_tokenised.csv")
 output_path = Path(r"G:\My Drive\Birkbeck\Project\Hansard")
-pre_stops = [str(t).split() for t in speeches['tokens'].fillna('')] #adds empty string to empty cells
+pre_stops = [str(t).split() for t in speeches['tokens'].fillna('')] #fillna() adds empty string to empty cells
 
 #==========Count words==============
 def word_cnt(token_list, output_csv):
@@ -39,20 +39,31 @@ def word_cnt(token_list, output_csv):
     print("Sample: ", cnt_table.sample(20))
     print("Head: ", cnt_table.head(20))
     print("Counts saved in: ", output_csv)
+
+
         
-#print("Word counts before stopword removal")
-word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
+#word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
 
 #=======Stop word removal=======
 nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner']) #parser and ner 
 spacy_stops = set(nlp.Defaults.stop_words)
 
-post_stops = []
+post_spacy_stops = []
 for tokens in pre_stops:
     removed = [word for word in tokens if word not in spacy_stops]
-    post_stops.append(removed)
+    post_spacy_stops.append(removed)
+#word_cnt(post_stops, 'post_word_stop_frequencies.csv')
 
 
 
-#print("Word counts after stopword removal")
-word_cnt(post_stops, 'post_word_stop_frequencies.csv')
+""""
+parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
+    'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
+    'thank', 'grateful', 'welcome', 'congratulate', 'absolutely',
+    'colleague', 'bench', 'chamber', '£',}
+
+mp_surnames = set()
+for name in df['display_as'].dropna().unique():
+    if name.lower() == 'unknown':
+        continue
+    mp_surnames.add(name.strip().split()[-1].lower()) """
