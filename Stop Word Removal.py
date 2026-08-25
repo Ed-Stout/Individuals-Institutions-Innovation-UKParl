@@ -2,6 +2,7 @@ from collections import Counter
 import pandas as pd
 import spacy
 from pathlib import Path
+from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
 
 speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\Hansard_Dataset_tokenised.csv")
 output_path = Path(r"G:\My Drive\Birkbeck\Project\Hansard")
@@ -31,7 +32,7 @@ def word_cnt(token_list, output_csv):
     doc_pcts = []
     for token in cnt_table['token']:
         pct = round(doc_freq[token] / len(token_list) * 100, 1)
-        doc_pcts.append(pct)
+        doc_pcts.append(pct) #percentage
 
     cnt_table['doc_pct'] = doc_pcts
     cnt_table.to_csv(output_path / output_csv, index=False, encoding='utf-8')
@@ -40,8 +41,37 @@ def word_cnt(token_list, output_csv):
     print("Head: ", cnt_table.head(20))
     print("Counts saved in: ", output_csv)
 
+def phrase_detector(token_list, output_csv, min_count=20, threshold=15, use_connectors=False):
 
-        
+    connectors = []
+    if use_connectors:
+        connectors = ENGLISH_CONNECTOR_WORDS #of, the, and etc.
+    else:
+        connectors = frozenset() #no connectors, sets in place
+
+    bigram_model = Phrases(token_list, min_count=min_count, threshold=threshold, connector_words=connectors) #training
+    bigram = Phraser(bigram_model) #phrases
+
+    trigram_model = Phrases(bigram[token_list], min_count=min_count, threshold=threshold, connector_words=connectors) #same again, but one more
+    trigram = Phraser(trigram_model)
+
+    add_bigrams = [bigram[tokens] for tokens in token_list] #go through bigrams in corpus
+    phrased = [trigram[tokens] for tokens in add_bigrams] #add trigrams to corpus
+
+    phrase_cnt = Counter() #count words
+    for tokens in phrased:
+        for word in tokens:
+            if '_' in word:
+                phrase_cnt[word] += 1
+
+    print("phrases: ", len(phrase_cnt))
+    for phrase, n in phrase_cnt.most_common(100):
+        print(phrase, n)
+
+    phrase_tbl = pd.DataFrame(phrase_cnt.most_common(500), columns=['phrase', 'count'])
+    phrase_tbl.to_csv(output_path / output_csv, index=False, encoding='utf-8')
+
+    return phrased
 #word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
 
 #=======Stop word removal=======
@@ -50,20 +80,17 @@ spacy_stops = set(nlp.Defaults.stop_words)
 
 post_spacy_stops = []
 for tokens in pre_stops:
-    removed = [word for word in tokens if word not in spacy_stops]
+    removed = [word for word in tokens if word not in spacy_stops] #keep the word if not in spacy_stops
     post_spacy_stops.append(removed)
 #word_cnt(post_stops, 'post_word_stop_frequencies.csv')
 
-
-
-""""
 parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
     'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
     'thank', 'grateful', 'welcome', 'congratulate', 'absolutely',
     'colleague', 'bench', 'chamber', '£',}
 
-mp_surnames = set()
-for name in df['display_as'].dropna().unique():
+mp_surnames = set()   #no duplicates
+for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
     if name.lower() == 'unknown':
         continue
-    mp_surnames.add(name.strip().split()[-1].lower()) """
+    mp_surnames.add(name.strip().split()[-1].lower()) #only last names. Bc onyl last names in the chamber
