@@ -72,6 +72,7 @@ def phrase_detector(token_list, output_csv, min_count=20, threshold=15, use_conn
     phrase_tbl.to_csv(output_path / output_csv, index=False, encoding='utf-8')
 
     return phrased
+
 #word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
 
 #=======Stop word removal=======
@@ -82,7 +83,8 @@ post_spacy_stops = []
 for tokens in pre_stops:
     removed = [word for word in tokens if word not in spacy_stops] #keep the word if not in spacy_stops
     post_spacy_stops.append(removed)
-#word_cnt(post_stops, 'post_word_stop_frequencies.csv')
+
+#word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
 
 parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
     'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
@@ -94,3 +96,7 @@ for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
     if name.lower() == 'unknown':
         continue
     mp_surnames.add(name.strip().split()[-1].lower()) #only last names. Bc onyl last names in the chamber
+
+phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True)
+
+phrased_b = phrase_detector(post_spacy_stops, 'phrases_route_b.csv', use_connectors=False)
