@@ -58,11 +58,13 @@ def phrase_detector(token_list, output_csv, min_count=20, threshold=15, use_conn
     add_bigrams = [bigram[tokens] for tokens in token_list] #go through bigrams in corpus
     phrased = [trigram[tokens] for tokens in add_bigrams] #add trigrams to corpus
 
-    phrase_cnt = Counter() #count words
+    phrase_cnt = Counter() # count words
     for tokens in phrased:
+        phrases = []
         for word in tokens:
             if '_' in word:
-                phrase_cnt[word] += 1
+                phrases.append(word)
+        phrase_cnt.update(phrases)
 
     print("phrases: ", len(phrase_cnt))
     for phrase, n in phrase_cnt.most_common(100):
@@ -75,6 +77,12 @@ def phrase_detector(token_list, output_csv, min_count=20, threshold=15, use_conn
 
 #word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
 
+#most common unhelpful words for analysis added to manual list
+parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
+    'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
+    'thank', 'grateful', 'welcome', 'congratulate', 'absolutely',
+    'colleague', 'bench', 'chamber', '£'}
+
 #=======Stop word removal=======
 nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner']) #parser and ner 
 spacy_stops = set(nlp.Defaults.stop_words)
@@ -85,11 +93,31 @@ for tokens in pre_stops:
     post_spacy_stops.append(removed)
 
 #word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
+#includes the top procedural phrases from earlier analysis which are not useful topics for analysis
 
-parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
-    'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
-    'thank', 'grateful', 'welcome', 'congratulate', 'absolutely',
-    'colleague', 'bench', 'chamber', '£',}
+#=====compare the two phrases routes======= decide on connectors
+#phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True) #com
+phrased_b = phrase_detector(post_spacy_stops, 'phrases_route_b.csv', use_connectors=False)
+
+#most common unhelpful phrases for analysis added to manual list
+procedural_phrases = {'point_order', 'madam_deputy_speaker', 'mr_speaker', 'dispatch_box',
+    'hon_friend', 'hon_member', 'hon_gentleman', 'hon_lady', 'hon_learn',
+    'right_hon_friend', 'right_hon_gentleman', 'right_hon_lady',
+    'hon_friend_member', 'thank_hon_friend', 'agree_hon_friend',
+    'give_way', 'secure_debate', 'answer_question'}
+
+domain_stops = parliamentary_stopwords.union(procedural_phrases)
+
+#==========domain stopword removal============
+post_domain_stops = [] 
+for tokens in phrased_b:
+    words_kept = []
+    for word in tokens:
+        if word not in domain_stops:
+            words_kept.append(word)
+    post_domain_stops.append(words_kept) #simple loop to go through each word and remove domain stopwords
+
+word_cnt(post_domain_stops, 'post_domain_stop_frequencies.csv') #output most common words after
 
 mp_surnames = set()   #no duplicates
 for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
@@ -97,6 +125,28 @@ for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
         continue
     mp_surnames.add(name.strip().split()[-1].lower()) #only last names. Bc onyl last names in the chamber
 
-phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True)
+#========SURNAMES AND COMMON WORDS CHECK=========
+counts = Counter() #count common words
+for tokens in post_domain_stops:
+    counts.update(tokens)
 
-phrased_b = phrase_detector(post_spacy_stops, 'phrases_route_b.csv', use_connectors=False)
+common_words = set()
+for word, n in counts.most_common(7500):
+    common_words.add(word)
+print("Surnames that are also common words:")
+common_surnames = mp_surnames.intersection(common_words) #& is intersection function - any MP surname which is common word is kept
+print(common_surnames) 
+
+keep_anyway = set()
+mp_surnames = mp_surnames - keep_anyway
+
+#==========surname stopword removal=============
+post_surname_stops = []
+for tokens in post_domain_stops:
+    words_kept = []
+    for word in tokens:
+        if word not in mp_surnames:
+            words_kept.append(word)
+    post_surname_stops.append(words_kept)
+
+word_cnt(post_surname_stops, 'post_surname_stop_frequencies.csv') #output most common words after
