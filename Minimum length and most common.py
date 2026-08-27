@@ -18,3 +18,20 @@ for tokens in tokens_in:
             keep_words.append(word)
     post_length.append(keep_words)
 
+#counts = Counter()
+
+for tokens in post_length:
+    Counter().update(token)
+
+common_words = set() # word and count
+for word, n in counts.most_common(10000): #key variable to change
+    common_words.add(word)
+
+post_vocab = []
+for tokens in post_length:
+    words_kept = []
+    for word in tokens:
+        if word in common_words:
+            keep_words.append(word)
+
+    post_vocab.append(keep_words)
