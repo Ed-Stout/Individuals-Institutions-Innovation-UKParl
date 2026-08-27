@@ -125,7 +125,7 @@ for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
         continue
     mp_surnames.add(name.strip().split()[-1].lower()) #only last names. Bc onyl last names in the chamber
 
-#========SURNAMES AND COMMON WORDS CHECK=========
+"""#========SURNAMES AND COMMON WORDS CHECK=========
 counts = Counter() #count common words
 for tokens in post_domain_stops:
     counts.update(tokens)
@@ -135,9 +135,13 @@ for word, n in counts.most_common(7500):
     common_words.add(word)
 print("Surnames that are also common words:")
 common_surnames = mp_surnames.intersection(common_words) #& is intersection function - any MP surname which is common word is kept
-print(common_surnames) 
+print(common_surnames)
 
-keep_anyway = set()
+keep_anyway = set()"""
+
+keep_anyway = {'day', 'green', 'double', 'fox', 'slaughter', 'pound', 'law',
+    'cash', 'bone', 'brake', 'glass', 'champion', 'buck', 'west',
+    'main', 'parish', 'burden', 'hall', 'churchill', 'black', 'white'}
 mp_surnames = mp_surnames - keep_anyway
 
 #==========surname stopword removal=============
@@ -150,3 +154,6 @@ for tokens in post_domain_stops:
     post_surname_stops.append(words_kept)
 
 word_cnt(post_surname_stops, 'post_surname_stop_frequencies.csv') #output most common words after
+
+speeches['tokens_clean'] = [' '.join(t) for t in post_surname_stops]
+speeches.to_csv(output_path / 'Hansard_Dataset_cleaned.csv', index=False, encoding='utf-8')
