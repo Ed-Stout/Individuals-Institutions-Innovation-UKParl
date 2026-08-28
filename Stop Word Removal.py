@@ -6,7 +6,7 @@ from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
 
 speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\Hansard_Dataset_tokenised.csv")
 output_path = Path(r"G:\My Drive\Birkbeck\Project\Hansard")
-pre_stops = [str(t).split() for t in speeches['tokens'].fillna('')] #fillna() adds empty string to empty cells
+pre_stops = [str(t).split() for speech in speeches['tokens'].fillna('')] #fillna() adds empty string to empty cells
 
 #==========Count words==============
 def word_cnt(token_list, output_csv):
@@ -155,5 +155,5 @@ for tokens in post_domain_stops:
 
 word_cnt(post_surname_stops, 'post_surname_stop_frequencies.csv') #output most common words after
 
-speeches['tokens_clean'] = [' '.join(t) for t in post_surname_stops]
+speeches['tokens_clean'] = [' '.join(speech) for speech in post_surname_stops]
 speeches.to_csv(output_path / 'Hansard_Dataset_cleaned.csv', index=False, encoding='utf-8')

@@ -3,20 +3,20 @@ import pandas as pd
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 200)
 
-input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\Hansard_Dataset_tokenised.csv"
-output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_sample.csv"
+input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\Hansard_Dataset_vocab.csv"
+output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_sample_cleaned.csv"
 
 data_for_review = pd.read_csv(input_csv)
 
 # ======Data review======
 print(data_for_review.shape)
 print(list(data_for_review.columns))
-print(data_for_review[['speech', 'tokens']].head(20))
+#print(data_for_review[['speech', 'tokens']].head(20))
 
 # ====== Sample for manual review ======
-columns_for_review = ['display_as', 'party', 'date', 'constituency', 'major_heading', 'minor_heading','speech', 'tokens', 'role']
+#columns_for_review = ['display_as', 'party', 'date', 'constituency', 'major_heading', 'minor_heading','speech', 'tokens', 'role']
 
-sample = data_for_review.sample(50, random_state=42)[columns_for_review]
+sample = data_for_review.sample(200)#, random_state=42)#[columns_for_review]
 
 print(sample)
 sample.to_csv(output_csv, index=False, encoding='utf-8')
