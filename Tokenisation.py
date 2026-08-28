@@ -12,6 +12,7 @@ tokenised_speeches = []
 for speech in nlp.pipe(speeches, batch_size=500): #batched approach is quicker
     lemmas = [token.lemma_ for token in speech
             if not token.is_punct #remove punctuation
+            and token.lemma_ != "'s" #remove these
             and not token.is_space # remove whitespace
             and not token.like_num] #remove numbers
     tokens = [lemma.lower() for lemma in lemmas] #lowercase after lemmatising

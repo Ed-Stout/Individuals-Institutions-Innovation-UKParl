@@ -14,7 +14,7 @@ print(list(data_for_review.columns))
 print(data_for_review[['speech', 'tokens']].head(20))
 
 # ====== Sample for manual review ======
-columns_for_review = ['display_as', 'date', 'major_heading', 'speech', 'tokens', 'role']
+columns_for_review = ['display_as', 'party', 'date', 'constituency', 'major_heading', 'minor_heading','speech', 'tokens', 'role']
 
 sample = data_for_review.sample(50, random_state=42)[columns_for_review]
 
