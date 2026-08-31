@@ -32,6 +32,52 @@ for record in ministers["memberships"]:
 
 print(len(roles_by_person), "people with non-committee roles") # check scale
 
+#=====relate posts to each speech date====
+person_list = speeches["person_id"].tolist()
+date_list = speeches["date"].tolist()
+
+parl_names = []
+gov_names = []
+opp_names = []
+
+for position in range(len(speeches)):
+    person = person_list[position]
+    speech_date = date_list[position]
+
+    parl_found = []
+    gov_found = []
+    opp_found = []
+
+    if pd.notna(person) and person in roles_by_person: #person is MP and not null
+        for post in roles_by_person[person]:
+            if post["start"] <= speech_date <= post["end"]: #inbetween end and start of speech date
+                if post["source"] == "datadotparl/governmentpost":
+                    gov_found.append(post["role"])
+                elif post["source"] == "datadotparl/oppositionpost":
+                    opp_found.append(post["role"])
+                elif post["source"] == "datadotparl/parliamentarypost":
+                    parl_found.append(post["role"])
+
+    if len(parl_found) > 0:
+        parl_names.append("; ".join(parl_found))
+    else:
+        parl_names.append(None)
+
+    if len(gov_found) > 0:
+        gov_names.append("; ".join(gov_found))
+    else:
+        gov_names.append(None)
+
+    if len(opp_found) > 0:
+        opp_names.append("; ".join(opp_found))
+    else:
+        opp_names.append(None)
+
+speeches["speaker_role_name"] = parl_names
+speeches["gov_role_name"] = gov_names
+speeches["opp_role_name"] = opp_names
+""""
+#previous method
 #========speaker_roles=============
 speaker_roles = speaker_roles.explode("parliamentary_posts") #everyone with multiple roles gets a new row for each role
 speaker_roles["speaker_role_name"] = speaker_roles["parliamentary_posts"].str["parl_post_name"] #create dictionary on the parl_post_name
@@ -78,7 +124,7 @@ speeches_join["role"] = (speeches_join["speaker_role_name"].combine_first(speech
 #===========create categories for MPs - far too many roles to map atm========
 speaker_list = speeches_join["speaker_role_name"].tolist()
 gov_list = speeches_join["gov_role_name"].tolist()
-opp_list = speeches_join["opp_role_name"].tolist()
+opp_list = speeches_join["opp_role_name"].tolist() """
 
 role_tiers = []
 for position in range(len(speeches_join)):
