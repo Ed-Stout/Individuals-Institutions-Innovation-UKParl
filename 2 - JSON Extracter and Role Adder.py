@@ -1,11 +1,46 @@
 import pandas as pd
 import json
 
-speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20.csv", dtype=str) #dtype = str so ids match
-
+speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20.csv", dtype=str) #dtype = str so ids match
 speeches["speech_order"] = speeches["speech_order"].astype(int) #speeches currently string
 
 ministers = json.load(open(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\ministers-2010.json", encoding="utf-8"))
+
+#========backfill missing person_id from mnis_id=============
+people = json.load(open(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\people.json", encoding="utf-8"))
+
+mnis_to_person = {} #datadotparl_id is the MNIS id
+
+for pers in people["persons"]:
+    for ident in pers.get("identifiers", []):
+        if ident.get("scheme") == "datadotparl_id":
+            mnis_to_person[str(ident["identifier"])] = pers["id"]
+
+person_list = speeches["person_id"].tolist()
+mnis_list = speeches["mnis_id"].tolist()
+
+filled = []
+rescued = 0
+
+#issue with some person_ids missing - fix below
+for position in range(len(speeches)):
+    person = person_list[position]
+    mnis = mnis_list[position]
+
+    if pd.isna(person) and pd.notna(mnis):
+        key = str(mnis).split(".")[0]  #mnis_id is float
+        if key in mnis_to_person:
+            filled.append(mnis_to_person[key])
+            rescued += 1
+            continue
+
+    filled.append(person)
+
+speeches["person_id"] = filled
+
+print(len(mnis_to_person), "mnis to person_id mappings")
+print(rescued, "speeches given a person_id from mnis_id")
+print("speeches still with no person_id:", speeches["person_id"].isna().sum())
 
 roles_by_person = {} #dictionary
 
@@ -36,7 +71,7 @@ print(len(roles_by_person), "people with non-committee roles") # check scale
 person_list = speeches["person_id"].tolist()
 date_list = speeches["date"].tolist()
 
-parl_names = []
+speaker_names = []
 gov_names = []
 opp_names = []
 
@@ -44,7 +79,7 @@ for position in range(len(speeches)):
     person = person_list[position]
     speech_date = date_list[position]
 
-    parl_found = []
+    speaker_found = []
     gov_found = []
     opp_found = []
 
@@ -56,12 +91,12 @@ for position in range(len(speeches)):
                 elif post["source"] == "datadotparl/oppositionpost":
                     opp_found.append(post["role"])
                 elif post["source"] == "datadotparl/parliamentarypost":
-                    parl_found.append(post["role"])
+                    speaker_found.append(post["role"])
 
-    if len(parl_found) > 0:
-        parl_names.append("; ".join(parl_found))
+    if len(speaker_found) > 0:
+        speaker_names.append("; ".join(speaker_found))
     else:
-        parl_names.append(None)
+        speaker_names.append(None)
 
     if len(gov_found) > 0:
         gov_names.append("; ".join(gov_found))
@@ -73,86 +108,61 @@ for position in range(len(speeches)):
     else:
         opp_names.append(None)
 
-speeches["speaker_role_name"] = parl_names
+speeches["speaker_role_name"] = speaker_names
 speeches["gov_role_name"] = gov_names
 speeches["opp_role_name"] = opp_names
-""""
-#previous method
-#========speaker_roles=============
-speaker_roles = speaker_roles.explode("parliamentary_posts") #everyone with multiple roles gets a new row for each role
-speaker_roles["speaker_role_name"] = speaker_roles["parliamentary_posts"].str["parl_post_name"] #create dictionary on the parl_post_name
 
-speaker_roles["mnis_id"] = speaker_roles["mnis_id"].astype(str) #make sure mnis_id is a string so it matches the speeches df
-speaker_roles["date"] = speaker_roles["date"].astype(str).str[:10] #make sure date is a string so it matches the speeches df, keep only date and not time
-
-speaker_roles = speaker_roles[["mnis_id", "date", "speaker_role_name"]]
-
-speaker_roles = speaker_roles.groupby(["mnis_id", "date"])["speaker_role_name"].agg("; ".join).reset_index() #prevents duplicates by adding mtuliple roles into one cell seperated by comma. Reset index
-
-#==========government_roles=============
-
-government_roles = government_roles.explode("government_posts") #everyone with multiple roles gets a new row for each role
-government_roles["gov_role_name"] = government_roles["government_posts"].str["gov_post_name"] #create dictionary on the gov_post_name
-
-government_roles["mnis_id"] = government_roles["mnis_id"].astype(str) 
-government_roles["date"] = government_roles["date"].astype(str).str[:10] 
-
-government_roles = government_roles[["mnis_id", "date", "gov_role_name"]]
-
-government_roles = government_roles.groupby(["mnis_id", "date"])["gov_role_name"].agg("; ".join).reset_index()
-
-#==========opposition_roles=============
-
-opposition_roles = opposition_roles.explode("opposition_posts") #everyone with multiple roles gets a new row for each role
-opposition_roles["opp_role_name"] = opposition_roles["opposition_posts"].str["oppo_post_name"] #create dictionary on the opp_post_name
-
-opposition_roles["mnis_id"] = opposition_roles["mnis_id"].astype(str) 
-opposition_roles["date"] = opposition_roles["date"].astype(str).str[:10] 
-
-opposition_roles = opposition_roles[["mnis_id", "date", "opp_role_name"]]
-
-opposition_roles = opposition_roles.groupby(["mnis_id", "date"])["opp_role_name"].agg("; ".join).reset_index()
-
-#==========join_all==============
-
-speeches_join = speeches.merge(speaker_roles, on=["mnis_id", "date"], how="left") #join both
-speeches_join = speeches_join.merge(government_roles, on=["mnis_id", "date"], how="left") #join both
-speeches_join = speeches_join.merge(opposition_roles, on=["mnis_id", "date"], how="left") #join both
-
-speeches_join["role"] = (speeches_join["speaker_role_name"].combine_first(speeches_join["gov_role_name"]).combine_first(speeches_join["opp_role_name"])) #all in one column
-
-#===========create categories for MPs - far too many roles to map atm========
-speaker_list = speeches_join["speaker_role_name"].tolist()
-gov_list = speeches_join["gov_role_name"].tolist()
-opp_list = speeches_join["opp_role_name"].tolist() """
+#======create categories for MPs - far too many toles to mp atm
+chair_roles = ["Speaker of the House of Commons", #speaker roles are important to be removed to align w/ barron
+    "Deputy Speaker and Chairman of Ways and Means",
+    "Deputy Speaker (First Deputy Chairman of Ways and Means)",
+    "Deputy Speaker (Second Deputy Chairman of Ways and Means)"]
 
 role_tiers = []
-for position in range(len(speeches_join)):
-    speaker_role = speaker_list[position]
-    gov_role = gov_list[position]
-    opp_role = opp_list[position]
+roles = []
 
-    if pd.notna(speaker_role):
-        role_tiers.append("parliamentary")
-    elif pd.notna(gov_role):
+for position in range(len(speeches)):
+    speaker_role = speaker_names[position]
+    gov_role = gov_names[position]
+    opp_role = opp_names[position]
+
+    is_chair = False
+    if speaker_role is not None:
+        for chair_role in chair_roles:
+            if chair_role in speaker_role: #in not == to avoid error on multiple roles
+                is_chair = True
+
+    if is_chair:
+        role_tiers.append("chair")
+        roles.append(speaker_role)
+    elif gov_role is not None:
         role_tiers.append("government")
-    elif pd.notna(opp_role):
+        roles.append(gov_role)
+    elif opp_role is not None:
         role_tiers.append("opposition")
+        roles.append(opp_role)
+    elif speaker_role is not None:      
+        role_tiers.append("backbencher")
+        roles.append(speaker_role)
     else:
-        role_tiers.append("backbench")
+        role_tiers.append("backbencher") #no role, backbencher assumed
+        roles.append(None)
 
-speeches_join["role_tier"] = role_tiers
+speeches["role"] = roles
+speeches["role_tier"] = role_tiers
 
-speeches_join.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20-updated.csv", index=False)
+speeches.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2015_20-step3.csv", index=False)
 
-#print(speaker_roles.sample(5))
-#print(speeches_join.head())
-#print(speaker_roles.tail())
-#print(speaker_roles["role_name"].value_counts())
-
-print(len(speeches), "speeches before join")
-print(len(speeches_join), "rows after join")
-print(speeches_join["role"].notna().sum(), "speeches with a role")
-
-print(speeches_join["speaker_role_name"].value_counts().head(20))
-print(speeches_join["role_tier"].value_counts())
+#==========checks==============
+print(len(speaker_names), len(gov_names), len(opp_names), len(speeches), "should all match")
+print("speeches with no person_id:", speeches["person_id"].isna().sum())
+print("speech_order still sorted:", speeches["speech_order"].is_monotonic_increasing)
+print(speeches["role"].notna().sum(), "speeches with a role")
+print()
+print(speeches["role_tier"].value_counts())
+print()
+print("--- chair speeches ---")
+print(speeches[speeches["role_tier"] == "chair"]["display_as"].value_counts())
+print()
+print("--- PM speeches ---")
+print(speeches[speeches["gov_role_name"].str.contains("The Prime Minister", na=False)]["display_as"].value_counts())
