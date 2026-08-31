@@ -1,8 +1,8 @@
 import pandas as pd
 
 input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\Source data\hansard-speeches-v310.csv"
-output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20.csv"
-order_csv = r"G:\My Drive\Birkbeck\Project\Hansard\speech_order_2016_20.csv"
+output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20.csv"
+order_csv = r"G:\My Drive\Birkbeck\Project\Hansard\speech_order_2015-20.csv"
 
 kept_chunks = []
 chunk_cnt = 0
