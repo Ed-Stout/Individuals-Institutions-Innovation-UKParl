@@ -33,13 +33,5 @@ speeches['id_letter'] = id_letters
 speeches['id_colnum'] = id_colnums
 speeches['id_seq'] = id_seqs
 
-# ====== checks ======
-print("ids with unexpected format:", len(bad_ids))
-print("date mismatches:", (speeches['id_date'] != speeches['date'].astype(str)).sum())
-print("colnum mismatches:", (speeches['id_colnum'] != speeches['colnum']).sum())
-
-letters_per_date = speeches.groupby('id_date')['id_letter'].nunique()
-print("dates with more than one letter:", (letters_per_date > 1).sum())
-
 # ====== the sort itself ======
 speeches = speeches.sort_values(['id_date', 'id_colnum', 'id_seq']).reset_index(drop=True)

@@ -1,11 +1,36 @@
 import pandas as pd
+import json
 
 speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20.csv", dtype=str) #dtype = str so ids match
-speaker_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\parliamentary_roles.json")
-government_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\government_roles.json")
-opposition_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\opposition_roles.json")
 
 speeches["speech_order"] = speeches["speech_order"].astype(int) #speeches currently string
+
+ministers = json.load(open(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\ministers-2010.json", encoding="utf-8"))
+
+roles_by_person = {} #dictionary
+
+for record in ministers["memberships"]:
+    source = record["source"]
+
+    if source == "datadotparl/committee": #not interested in committee roles at this stage
+        continue
+
+    person = record["person_id"] #join later
+
+    end_date = record.get("end_date") #date they left role
+    if not end_date:                    #blanks here mean they are still in the role (unlikely due to age of data)
+        end_date = "3000-12-31"
+
+    roles = { "start": record["start_date"], #create data
+            "end": end_date,
+            "role": record["role"],
+            "source": source}
+
+    if person not in roles_by_person: #avoid keyerror
+        roles_by_person[person] = []
+    roles_by_person[person].append(roles)
+
+print(len(roles_by_person), "people with non-committee roles") # check scale
 
 #========speaker_roles=============
 speaker_roles = speaker_roles.explode("parliamentary_posts") #everyone with multiple roles gets a new row for each role
@@ -85,7 +110,3 @@ print(speeches_join["role"].notna().sum(), "speeches with a role")
 
 print(speeches_join["speaker_role_name"].value_counts().head(20))
 print(speeches_join["role_tier"].value_counts())
-
-overlap = (speeches_join[["speaker_role_name", "gov_role_name", "opp_role_name"]]
-           .notna().sum(axis=1))
-print("speeches with posts in more than one tier:", (overlap > 1).sum())
