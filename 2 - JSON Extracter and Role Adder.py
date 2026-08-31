@@ -1,9 +1,11 @@
 import pandas as pd
 
-speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016.csv", dtype=str) #dtype = str so ids match
-speaker_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\parliamentary_roles.json")
-government_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\government_roles.json")
-opposition_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\opposition_roles.json")
+speeches = pd.read_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20.csv", dtype=str) #dtype = str so ids match
+speaker_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\parliamentary_roles.json")
+government_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\government_roles.json")
+opposition_roles = pd.read_json(r"G:\My Drive\Birkbeck\Project\Hansard\Source data\opposition_roles.json")
+
+speeches["speech_order"] = speeches["speech_order"].astype(int) #speeches currently string
 
 #========speaker_roles=============
 speaker_roles = speaker_roles.explode("parliamentary_posts") #everyone with multiple roles gets a new row for each role
@@ -48,7 +50,29 @@ speeches_join = speeches_join.merge(opposition_roles, on=["mnis_id", "date"], ho
 
 speeches_join["role"] = (speeches_join["speaker_role_name"].combine_first(speeches_join["gov_role_name"]).combine_first(speeches_join["opp_role_name"])) #all in one column
 
-speeches_join.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016-updated.csv", index=False)
+#===========create categories for MPs - far too many roles to map atm========
+speaker_list = speeches_join["speaker_role_name"].tolist()
+gov_list = speeches_join["gov_role_name"].tolist()
+opp_list = speeches_join["opp_role_name"].tolist()
+
+role_tiers = []
+for position in range(len(speeches_join)):
+    speaker_role = speaker_list[position]
+    gov_role = gov_list[position]
+    opp_role = opp_list[position]
+
+    if pd.notna(speaker_role):
+        role_tiers.append("parliamentary")
+    elif pd.notna(gov_role):
+        role_tiers.append("government")
+    elif pd.notna(opp_role):
+        role_tiers.append("opposition")
+    else:
+        role_tiers.append("backbench")
+
+speeches_join["role_tier"] = role_tiers
+
+speeches_join.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2016_20-updated.csv", index=False)
 
 #print(speaker_roles.sample(5))
 #print(speeches_join.head())
@@ -58,3 +82,10 @@ speeches_join.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-201
 print(len(speeches), "speeches before join")
 print(len(speeches_join), "rows after join")
 print(speeches_join["role"].notna().sum(), "speeches with a role")
+
+print(speeches_join["speaker_role_name"].value_counts().head(20))
+print(speeches_join["role_tier"].value_counts())
+
+overlap = (speeches_join[["speaker_role_name", "gov_role_name", "opp_role_name"]]
+           .notna().sum(axis=1))
+print("speeches with posts in more than one tier:", (overlap > 1).sum())
