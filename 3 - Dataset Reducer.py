@@ -18,7 +18,7 @@ df = df[['id', 'speech', 'display_as', 'party', 'constituency',
          'role', 'role_tier']] #keep only columns which are useful
 
 print(len(df), "rows after")
-#print("speech_order still sorted:", df['speech_order'].is_monotonic_increasing) #checks order
+#print("still sorted?", df['speech_order'].is_monotonic_increasing) #checks order
 #print("null speeches kept:", df['speech_class'].isna().sum())
 print(df['role_tier'].value_counts())
 print(df['speech_class'].value_counts(dropna=False))
