@@ -3,13 +3,14 @@ from pathlib import Path
 from collections import Counter
 
 output_path = Path(r"G:\My Drive\Birkbeck\Project\Hansard")
-speeches = pd.read_csv(output_path / 'Hansard_Dataset_cleaned.csv')
+speeches = pd.read_csv(r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step6.csv')
+
+#=======parameters to change=========
+min_length = 3
+vocab_size = 10000
+retain_words = {'eu', 'uk', 'un'} # words from bigrams/trigrams / most common??
 
 input_tokens = [str(speech).split() for speech in speeches['tokens_clean'].fillna('')]
-
-#==========minimu tokens of 3======
-min_length = 3 # see impact of different lengths
-retain_words = {'eu', 'uk', 'un'} # words from bigrams/trigrams / most common??
 
 post_length = []
 for tokens in input_tokens:
@@ -24,7 +25,7 @@ for tokens in post_length:
     counts.update(tokens)
 
 common_words = set() # word and count
-for word, n in counts.most_common(10000): #key variable to change
+for word, n in counts.most_common(vocab_size): #key variable to change
     common_words.add(word)
 
 post_vocab = []
@@ -56,9 +57,48 @@ print("Tokens after:", post_token_cnt)
 print("Percentage retained:", round(post_token_cnt / pre_token_cnt * 100, 1), "%")
 print("Speeches with zero tokens:", empty_speeches)
 
-cutoff_word, cutoff_count = counts.most_common(10000)[-1]
+cutoff_word, cutoff_count = counts.most_common(vocab_size)[-1]
 print("Least frequent word kept:", cutoff_word, "at", cutoff_count, "uses")
 
-#==========save============
+#==========how short are the survivors============
+short_5 = 0
+short_10 = 0
+short_20 = 0
+for tokens in post_vocab:
+    if len(tokens) < 5:
+        short_5 += 1
+    if len(tokens) < 10:
+        short_10 += 1
+    if len(tokens) < 20:
+        short_20 += 1
+
+print("Speeches under 5 tokens:", short_5)
+print("Speeches under 10 tokens:", short_10)
+print("Speeches under 20 tokens:", short_20)
+
+#==========remove empty speeches============
 speeches['tokens_vocab'] = [' '.join(word) for word in post_vocab]
-speeches.to_csv(output_path / 'Hansard_Dataset_vocab.csv', index=False, encoding='utf-8')
+
+is_empty = speeches['tokens_vocab'].str.strip() == ''
+
+excluded = speeches[is_empty]
+excluded.to_csv(output_path / 'excluded_empty_speeches.csv', index=False, encoding='utf-8')
+
+speeches = speeches[~is_empty].reset_index(drop=True)
+
+#==========position in the analysis chain============
+#speech_order is the permanent position in the full 2015-20 chain
+#analysis_order is the position after filtering - the chain closes up, per Barron SI 2.4
+analysis_order = []
+for position in range(len(speeches)):
+    analysis_order.append(position)
+
+speeches['analysis_order'] = analysis_order
+
+#==========checks============
+print("Speeches removed as empty:", len(excluded))
+print("Speeches remaining:", len(speeches))
+print("speech_order still sorted:", speeches['speech_order'].is_monotonic_increasing)
+
+#==========save============
+speeches.to_csv(output_path / 'Hansard_2015-20_final_corpus.csv', index=False, encoding='utf-8')

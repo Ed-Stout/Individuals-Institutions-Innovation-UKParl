@@ -89,7 +89,8 @@ def phrase_detector(token_list, output_csv, min_count=100, threshold=15, use_con
 parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
     'right', 'mr', 'mrs', 'ms', 'sir', 'dame', 'madam', 'deputy', 'chair',
     'thank', 'grateful', 'welcome', 'congratulate', 'absolutely',
-    'colleague', 'bench', 'chamber', '£'}
+    'colleague', 'bench', 'chamber', '£', 'members', 'bills', 'ministers', 'gentlemen',
+    'friends', 'ladies', 'bill', 'minister'}
 
 #=======Stop word removal=======
 nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner']) #parser and ner 
@@ -101,29 +102,6 @@ for tokens in pre_stops:
     post_spacy_stops.append(removed)
 
 del pre_stops #reduce load
-
-#========DIAGNOSTICS - before phrase detection========
-diag_counts = Counter()
-for tokens in post_spacy_stops:
-    diag_counts.update(tokens)
-
-print("member:", diag_counts['member'], "members:", diag_counts['members'])
-print("bill:", diag_counts['bill'], "bills:", diag_counts['bills'])
-print("minister:", diag_counts['minister'], "ministers:", diag_counts['ministers'])
-print("gentleman:", diag_counts['gentleman'], "gentlemen:", diag_counts['gentlemen'])
-
-mp_surnames_check = set()
-for name in speeches['display_as'].dropna().unique():
-    if name.lower() == 'unknown':
-        continue
-    mp_surnames_check.add(name.strip().split()[-1].lower())
-
-common_check = set()
-for word, n in diag_counts.most_common(7500):
-    common_check.add(word)
-
-print("Surnames that are also common words:")
-print(sorted(mp_surnames_check.intersection(common_check)))
 
 #word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
 #includes the top procedural phrases from earlier analysis which are not useful topics for analysis
@@ -139,7 +117,10 @@ procedural_phrases = {'point_order', 'madam_deputy_speaker', 'mr_speaker', 'disp
     'hon_friend', 'hon_member', 'hon_gentleman', 'hon_lady', 'hon_learn',
     'right_hon_friend', 'right_hon_gentleman', 'right_hon_lady',
     'hon_friend_member', 'thank_hon_friend', 'agree_hon_friend',
-    'give_way', 'secure_debate', 'answer_question'}
+    'give_way', 'secure_debate', 'answer_question', 'conservative_members',
+    'opposition_members', 'labour_members', 'snp_members','hon_friend_members', 
+    'members_parliament', 'assure_hon_friend', 'sure_hon_lady', 'house_commons',
+    'lord_chancellor'}
 
 domain_stops = parliamentary_stopwords.union(procedural_phrases)
 
@@ -156,9 +137,10 @@ del phrased_b #prevent runtime issues
 
 word_cnt(post_domain_stops, 'post_domain_stop_frequencies.csv') #output most common words after
 
+skip_names = {'unknown', 'several hon. members', 'hon. members'}
 mp_surnames = set()   #no duplicates
 for name in speeches['display_as'].dropna().unique(): #skip empties, distinct
-    if name.lower() == 'unknown':
+    if name.lower() in skip_names:
         continue
     mp_surnames.add(name.strip().split()[-1].lower()) #only last names. Bc onyl last names in the chamber
 
@@ -193,10 +175,44 @@ del post_domain_stops
 
 word_cnt(post_surname_stops, 'post_surname_stop_frequencies.csv') #output most common words after
 
-#==========surnames surviving inside phrases============
-#removal is exact-match, so 'corbyn' goes but 'corbyn_say' does not
-leaked = Counter()
+#==========targeted phrase cleanup============
+name_phrases = set()
+
+for name in speeches['display_as'].dropna().unique():
+    if name.lower() in skip_names:
+        continue
+    parts = name.lower().strip().split()
+    if len(parts) >= 2:
+        name_phrases.add(parts[0] + '_' + parts[-1])   #david_cameron
+
+print("MP name phrases to remove:", len(name_phrases))
+
+post_phrase_stops = []
+removed_cnt = Counter()
+
 for tokens in post_surname_stops:
+    words_kept = []
+    for word in tokens:
+        if word in name_phrases:
+            removed_cnt[word] += 1
+        else:
+            words_kept.append(word)
+    post_phrase_stops.append(words_kept)
+
+del post_surname_stops
+
+print("distinct phrases removed:", len(removed_cnt))
+for phrase, n in removed_cnt.most_common(40):
+    print(phrase, n)
+
+removed_tbl = pd.DataFrame(removed_cnt.most_common(500), columns=['phrase', 'count'])
+removed_tbl.to_csv(output_path / 'phrases_removed.csv', index=False, encoding='utf-8')
+
+word_cnt(post_phrase_stops, 'post_phrase_stop_frequencies.csv')
+
+#==========surnames surviving inside phrases============
+leaked = Counter()
+for tokens in post_phrase_stops:
     for word in tokens:
         if '_' in word:
             for part in word.split('_'):
@@ -212,9 +228,11 @@ leak_tbl.to_csv(output_path / 'surnames_inside_phrases.csv', index=False, encodi
 
 #==========speeches left with nothing============
 empty = 0
-for tokens in post_surname_stops:
+for tokens in post_phrase_stops:
     if len(tokens) == 0:
         empty += 1
 
-speeches['tokens_clean'] = [' '.join(speech) for speech in post_surname_stops]
+print("speeches with no tokens left: ", empty, "of", len(post_phrase_stops))
+
+speeches['tokens_clean'] = [' '.join(speech) for speech in post_phrase_stops]
 speeches.to_csv(output_csv, index=False, encoding='utf-8')

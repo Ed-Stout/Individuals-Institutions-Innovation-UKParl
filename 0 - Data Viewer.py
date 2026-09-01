@@ -3,8 +3,8 @@ import pandas as pd
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 200)
 
-input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step5.csv"
-output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_step5_2015-20_sample.csv"
+input_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step6.csv"
+output_csv = r"G:\My Drive\Birkbeck\Project\Hansard\hansard_step6_2015-20_sample.csv"
 
 data_for_review = pd.read_csv(input_csv)
 
