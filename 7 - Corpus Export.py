@@ -38,7 +38,7 @@ corpus_txt = output_path / 'corpus.txt'
 
 with open(corpus_txt, 'w', encoding='utf-8') as text:
     for tokens in speeches['tokens_vocab']:
-        text.write(str(tokens).strip() + '\n') #new line after each one
+        text.write(tokens.strip() + '\n') #new line after each one
 
 #count issues
 line_cnt = 0
