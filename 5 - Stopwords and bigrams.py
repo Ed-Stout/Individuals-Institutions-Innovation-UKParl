@@ -8,7 +8,7 @@ output_path = Path(r'G:\My Drive\Birkbeck\Project\Hansard')
 #output_csv = output_path / 'hansard_speeches_2015-20_step6.csv'
 output_csv = r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step6.csv'
 
-use_columns = ['id', 'display_as', 'date', 'speech_order', 'role_tier', 'tokens'] #took too long to run - use only essential columns
+use_columns = ['id', 'display_as', 'party', 'date', 'speech_order', 'role', 'role_tier', 'tokens'] #took too long to run - use only essential columns
 speeches = pd.read_csv(r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step5.csv', usecols=use_columns)
 
 pre_stops = [str(speech).split() for speech in speeches['tokens'].fillna('')] #fillna() adds empty string to empty cells
