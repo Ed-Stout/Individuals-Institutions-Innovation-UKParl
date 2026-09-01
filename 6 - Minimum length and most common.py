@@ -8,6 +8,7 @@ speeches = pd.read_csv(r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2
 #=======parameters to change=========
 min_length = 3
 vocab_size = 10000
+min_doc_tokens = 4
 retain_words = {'eu', 'uk', 'un'} # words from bigrams/trigrams / most common??
 
 input_tokens = [str(speech).split() for speech in speeches['tokens_clean'].fillna('')]
@@ -54,37 +55,43 @@ print("Unique tokens available:", len(counts))
 print("Vocabulary kept:", len(common_words))
 print("Tokens before:", pre_token_cnt)
 print("Tokens after:", post_token_cnt)
-print("Percentage retained:", round(post_token_cnt / pre_token_cnt * 100),1, "%")
+print("Percentage retained:", round(post_token_cnt / pre_token_cnt * 100,1), "%")
 print("Speeches with zero tokens:", empty_speeches)
 
 cutoff_word, cutoff_count = counts.most_common(vocab_size)[-1] #last word - interesting to consider how useful it is - consider addin gmore
 print("Least frequent word kept:", cutoff_word, "at", cutoff_count, "uses")
 
 #==========how short are survivors - will use this to possibly reduce more speeches ======
+short_3 = 0
 short_5 = 0
 short_10 = 0
-short_20 = 0
 for tokens in post_vocab:
     if len(tokens) < 3:
-        short_5 += 1
+        short_3 += 1
     if len(tokens) < 5:
+        short_5 += 1
+    if len(tokens) < 10:
         short_10 += 1
-    if len(tokens) < 15:
-        short_20 += 1
 
+print("Speeches under 3 tokens:", short_3)
 print("Speeches under 5 tokens:", short_5)
 print("Speeches under 10 tokens:", short_10)
-print("Speeches under 20 tokens:", short_20)
 
-#==========remove empty speeches============
+#==========remove short speeches============
 speeches['tokens_vocab'] = [' '.join(tokens) for tokens in post_vocab] #into space seperated string
 
-is_empty = speeches['tokens_vocab'].str.strip() == '' #if empty then true
+doc_lengths = []
+for tokens in post_vocab:
+    doc_lengths.append(len(tokens))
 
-excluded = speeches[is_empty]
-excluded.to_csv(output_path / 'excluded_empty_speeches.csv', index=False, encoding='utf-8') #to check later
+speeches['doc_length'] = doc_lengths
 
-speeches = speeches[~is_empty].reset_index(drop=True) #create new order with empties removed
+too_short = speeches['doc_length'] < min_doc_tokens  #remove less than min_doc_tokens
+
+excluded = speeches[too_short]
+excluded.to_csv(output_path / 'excluded_short_speeches.csv', index=False, encoding='utf-8') #save for later
+
+speeches = speeches[~too_short].reset_index(drop=True)
 
 #==========position after filtering ========
 analysis_order = []
@@ -94,7 +101,7 @@ for position in range(len(speeches)):
 speeches['analysis_order'] = analysis_order #order after filtering - key for analysis
 
 #==========checks============
-print("Speeches removed as empty:", len(excluded)) #removed speeches
+print("Speeches removed as too short:", len(excluded)) #removed speeches
 print("Speeches remaining:", len(speeches))        #total speeches
 print("speech_order still sorted:", speeches['speech_order'].is_monotonic_increasing) #order
 
