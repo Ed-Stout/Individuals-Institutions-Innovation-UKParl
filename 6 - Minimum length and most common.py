@@ -36,7 +36,7 @@ for tokens in post_length:
             keep_words.append(word)
     post_vocab.append(keep_words)
 
-#==========report what happened
+#==========count of tokens before and after and empties=====
 pre_token_cnt = 0
 for tokens in input_tokens:
     pre_token_cnt += len(tokens)
@@ -54,22 +54,22 @@ print("Unique tokens available:", len(counts))
 print("Vocabulary kept:", len(common_words))
 print("Tokens before:", pre_token_cnt)
 print("Tokens after:", post_token_cnt)
-print("Percentage retained:", round(post_token_cnt / pre_token_cnt * 100, 1), "%")
+print("Percentage retained:", round(post_token_cnt / pre_token_cnt * 100),1, "%")
 print("Speeches with zero tokens:", empty_speeches)
 
-cutoff_word, cutoff_count = counts.most_common(vocab_size)[-1]
+cutoff_word, cutoff_count = counts.most_common(vocab_size)[-1] #last word - interesting to consider how useful it is - consider addin gmore
 print("Least frequent word kept:", cutoff_word, "at", cutoff_count, "uses")
 
-#==========how short are the survivors============
+#==========how short are survivors - will use this to possibly reduce more speeches ======
 short_5 = 0
 short_10 = 0
 short_20 = 0
 for tokens in post_vocab:
-    if len(tokens) < 5:
+    if len(tokens) < 3:
         short_5 += 1
-    if len(tokens) < 10:
+    if len(tokens) < 5:
         short_10 += 1
-    if len(tokens) < 20:
+    if len(tokens) < 15:
         short_20 += 1
 
 print("Speeches under 5 tokens:", short_5)
@@ -77,28 +77,26 @@ print("Speeches under 10 tokens:", short_10)
 print("Speeches under 20 tokens:", short_20)
 
 #==========remove empty speeches============
-speeches['tokens_vocab'] = [' '.join(word) for word in post_vocab]
+speeches['tokens_vocab'] = [' '.join(tokens) for tokens in post_vocab] #into space seperated string
 
-is_empty = speeches['tokens_vocab'].str.strip() == ''
+is_empty = speeches['tokens_vocab'].str.strip() == '' #if empty then true
 
 excluded = speeches[is_empty]
-excluded.to_csv(output_path / 'excluded_empty_speeches.csv', index=False, encoding='utf-8')
+excluded.to_csv(output_path / 'excluded_empty_speeches.csv', index=False, encoding='utf-8') #to check later
 
-speeches = speeches[~is_empty].reset_index(drop=True)
+speeches = speeches[~is_empty].reset_index(drop=True) #create new order with empties removed
 
-#==========position in the analysis chain============
-#speech_order is the permanent position in the full 2015-20 chain
-#analysis_order is the position after filtering - the chain closes up, per Barron SI 2.4
+#==========position after filtering ========
 analysis_order = []
 for position in range(len(speeches)):
     analysis_order.append(position)
 
-speeches['analysis_order'] = analysis_order
+speeches['analysis_order'] = analysis_order #order after filtering - key for analysis
 
 #==========checks============
-print("Speeches removed as empty:", len(excluded))
-print("Speeches remaining:", len(speeches))
-print("speech_order still sorted:", speeches['speech_order'].is_monotonic_increasing)
+print("Speeches removed as empty:", len(excluded)) #removed speeches
+print("Speeches remaining:", len(speeches))        #total speeches
+print("speech_order still sorted:", speeches['speech_order'].is_monotonic_increasing) #order
 
 #==========save============
 speeches.to_csv(output_path / 'Hansard_2015-20_final_corpus.csv', index=False, encoding='utf-8')

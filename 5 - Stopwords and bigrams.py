@@ -178,7 +178,7 @@ word_cnt(post_surname_stops, 'post_surname_stop_frequencies.csv') #output most c
 #==========targeted phrase cleanup============
 name_phrases = set()
 
-for name in speeches['display_as'].dropna().unique():
+for name in speeches['display_as'].dropna().unique():    #prevent MP names being kept as bigrams
     if name.lower() in skip_names:
         continue
     parts = name.lower().strip().split()
@@ -206,33 +206,17 @@ for phrase, n in removed_cnt.most_common(40):
     print(phrase, n)
 
 removed_tbl = pd.DataFrame(removed_cnt.most_common(500), columns=['phrase', 'count'])
-removed_tbl.to_csv(output_path / 'phrases_removed.csv', index=False, encoding='utf-8')
+removed_tbl.to_csv(output_path / 'phrases_removed.csv', index=False, encoding='utf-8') #record which ones have been removed
 
 word_cnt(post_phrase_stops, 'post_phrase_stop_frequencies.csv')
 
-#==========surnames surviving inside phrases============
-leaked = Counter()
-for tokens in post_phrase_stops:
-    for word in tokens:
-        if '_' in word:
-            for part in word.split('_'):
-                if part in mp_surnames:
-                    leaked[word] += 1
-
-print("distinct phrases containing a surname: ", len(leaked))
-for phrase, n in leaked.most_common(30):
-    print(phrase, n)
-
-leak_tbl = pd.DataFrame(leaked.most_common(500), columns=['phrase', 'count'])
-leak_tbl.to_csv(output_path / 'surnames_inside_phrases.csv', index=False, encoding='utf-8')
-
-#==========speeches left with nothing============
+#==========speeches left with no tokens======
 empty = 0
 for tokens in post_phrase_stops:
     if len(tokens) == 0:
         empty += 1
 
-print("speeches with no tokens left: ", empty, "of", len(post_phrase_stops))
+print("speeches with no tokens left: ", empty, "of", len(post_phrase_stops)) #/ total
 
 speeches['tokens_clean'] = [' '.join(speech) for speech in post_phrase_stops]
 speeches.to_csv(output_csv, index=False, encoding='utf-8')
