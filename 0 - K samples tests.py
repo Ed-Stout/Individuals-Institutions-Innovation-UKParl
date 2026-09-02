@@ -93,3 +93,14 @@ with open(save_path / f'sample_topwords_k{topicnum}.txt', 'w', encoding='utf-8')
         score = round(exclusivities[k], 2)
         f.write("topic " + str(k) + " (excl " + str(score) + "): " + word_list + "\n")
 
+np.savetxt(save_path / f'loglik_sample_k{topicnum}.txt', lda_model.loglikelihoods_)
+
+#=======one line per K, for comparison table=========
+with open(save_path / f'k_comparison_k{topicnum}.txt', 'w', encoding='utf-8') as f:
+    f.write(f"K: {topicnum}\n")
+    f.write(f"sample size: {len(texts)}\n")
+    f.write(f"n_iter: {n_iter}\n")
+    f.write(f"mean exclusivity: {round(mean_exclusivity, 4)}\n")
+    f.write(f"duplicate pairs: {duplicate_pairs}\n")
+    f.write(f"final log likelihood: {lda_model.loglikelihoods_[-1]}\n")
+    f.write(f"elapsed minutes: {round(elapsed / 60, 1)})     
