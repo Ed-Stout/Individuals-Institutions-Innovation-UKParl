@@ -52,3 +52,44 @@ elapsed = time.time() - start
 print("elapsed mins:", round(elapsed / 60, 1))
 
 topic_word = lda_model.topic_word_
+
+#=======exclusivity - distinctiveness======
+top_n = 20 #standard practice
+word_totals = topic_word.sum(axis=0) #
+
+exclusivities = []
+for k in range(topicnum):
+    top_indices = np.argsort(topic_word[k])[::-1][:top_n] #top 20 by position, largest first
+    shares = []
+    for index in top_indices:
+        shares.append(topic_word[k][index] / word_totals[index]) #how common across corpus
+    exclusivities.append(float(np.mean(shares))) #average distinctiveness per topic
+
+mean_exclusivity = float(np.mean(exclusivities)) #average across all topics
+print("mean exclusivity:", round(mean_exclusivity,2))
+
+#=======near-duplicate topics=========
+top_sets = []
+for k in range(topicnum):
+    top_indices = np.argsort(topic_word[k])[::-1][:10] #top10
+    top_sets.append(set(top_indices)) #no duplicates, intersection
+
+duplicate_pairs = 0
+for a in range(topicnum):
+    for b in range(a + 1, topicnum): #+1 means they don't compare to themselves
+        if len(top_sets[a] & top_sets[b]) >= 5: #count intersections
+            duplicate_pairs += 1
+
+print("topic pairs sharing 5+ of their top 10 words:", duplicate_pairs)
+
+#=======top words for manual reading=========
+with open(save_path / f'sample_topwords_k{topicnum}.txt', 'w', encoding='utf-8') as f:
+    for k in range(topicnum):
+        top_indices = np.argsort(topic_word[k])[::-1][:15] #top 15
+        words = []
+        for index in top_indices: #top_indices has column numbers and vocabulary has words
+            words.append(vocabulary[index])
+        word_list = ' '.join(words)
+        score = round(exclusivities[k], 2)
+        f.write("topic " + str(k) + " (excl " + str(score) + "): " + word_list + "\n")
+

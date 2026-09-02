@@ -63,6 +63,7 @@ with open(save_path / 'vocabulary.txt', 'w', encoding='utf-8') as f:
     for word in vocabulary:
         f.write(word + '\n')
 
+topwords_file = save_path / f'topwords_k{topicnum}.txt'
 #==========top words ===========
 with open(save_path / f'topwords_k{topicnum}.txt', 'w', encoding='utf-8') as f:
     for k in range(topicnum):
@@ -70,7 +71,9 @@ with open(save_path / f'topwords_k{topicnum}.txt', 'w', encoding='utf-8') as f:
         words = []
         for index in top_indices:
             words.append(vocabulary[index])
-        f.write(f"topic {k}: " + ' '.join(words) + '\n')
+        word_list = ' '.join(words)
+        f.write("topic " + str(k) + ": " + word_list + "\n")
+        
 
 #==========record parameters ========
 with open(save_path / f'run_params_k{topicnum}.txt', 'w', encoding='utf-8') as f:
