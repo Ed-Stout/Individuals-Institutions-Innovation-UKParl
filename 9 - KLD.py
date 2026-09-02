@@ -33,7 +33,7 @@ ordered_corpus = corpus["analysis_order"].to_numpy()
 order_base = order_values[0]
 expected_order = np.arange(order_base, order_base + len(corpus))
 
-row_sums = mixtures.sum(axis=1)
+row_sums = mixtures.sum(axis=1) #sums to one across topics
 print("row sums max:", row_sums.max())
 print("row sums min:", row_sums.min())
 
@@ -41,5 +41,41 @@ print(corpus["role_tier"].value_counts())
 
 #is_measurable = ~corpus
 
+#=================checks======================
 
+if len(corpus) != mixtures.shape[0]:
+    print("corpus rows:", len(corpus))
+    print("mixtures rows:", mixtures.shape[0])
+    raise SystemExit("mixtures and topic mixture row counts differ")
 
+if not np.array_equal(ordered_corpus, expected_order):
+    print("first five values:", ordered_corpus[:5])
+    print("duplicates:", len(ordered_corpus) - len(set(ordered_corpus))) 
+    raise SystemExit("analysis is not in order!")
+
+if not corpus["speech_order"].is_monotonic_increasing:
+    raise SystemExit("speeches not in order!")
+
+if not corpus["date"].is_monotic_increasing:
+    raise SystemExit("dates not in order!")
+
+role_tiers = corpus["role_tier"].tolist()
+is_measurable = []
+for tier in role_tiers:
+    if tier in window_excluded_tiers:
+        is_measurable.append(False) 
+    else:
+        is_measurable.append(True) #can appear in anpother window
+is_measurable = np.array(is_measurable)
+print("measurable:", is_measurable.sum(), "of", len(corpus))
+
+for scale in scales:
+    if 2 * scale >= is_measurable.sum():
+        raise SystemExit("Scale too big for corpus")
+
+measurable_rows = np.flatnonzero(is_measurable) #ordered row num of every speech in a window
+n_measurable = len(measurable_rows) #number of rows measurable
+
+measurable_cnt = np.cumsum(is_measurable) #running count of speeches
+
+measurable_before = measurable_cnt - is_measurable #before, incl minus its own count
