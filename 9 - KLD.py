@@ -105,3 +105,71 @@ for scale in scales:
     start, end = scoreable_range(scale)
     print("scale", scale, "| scoreable", end - start, "of", len(corpus))
 
+#=========running totals=======================
+log_mixtures = np.log2(mixtures)
+#how spread out each speech is across the 100 topics
+weighted = mixtures * log_mixtures #each topic's probability times its own log
+
+entropy = -weighted.sum(axis=1) # one per speech
+
+del weighted
+
+n_speeches = len(corpus)
+n_topics = mixtures.shape[1]
+
+cumulative = np.zeros((n_speeches + 1, n_topics)) #goes down the rows
+
+cumulative[1:] = np.cumsum(log_mixtures, axis=0) #axis=0 accumulates down the speeches
+
+print("running totals built:", cumulative.shape)
+print("memory:", round(cumulative.nbytes / 1e6, 1), "MB")
+
+"""#=========Barron's original, for checking
+
+def barron_kld(pdists0, pdists1):
+    return (pdists1 * np.log2(pdists1 / pdists0)).sum(axis=1)
+
+def barron_ntr(thetas_arr, scale):
+    speechstart = scale
+    speechend = thetas_arr.shape[0] - scale
+
+    novelties = []
+    transiences = []
+    resonances = []
+
+    for j in range(speechstart, speechend, 1):
+        center_theta = thetas_arr[j]
+
+        after_boxend = j + scale + 1
+        before_boxstart = j - scale
+
+        before_theta_arr = thetas_arr[before_boxstart:j]
+        beforenum = before_theta_arr.shape[0]
+        before_centertheta_arr = np.tile(center_theta, reps=(beforenum, 1))
+
+        after_theta_arr = thetas_arr[j + 1:after_boxend]
+        afternum = after_theta_arr.shape[0]
+        after_centertheta_arr = np.tile(center_theta, reps=(afternum, 1))
+
+        before_KLDs = barron_kld(before_theta_arr, before_centertheta_arr)
+        after_KLDs = barron_kld(after_theta_arr, after_centertheta_arr)
+
+        novelty = np.mean(before_KLDs)
+        transience = np.mean(after_KLDs)
+
+        novelties.append(novelty)
+        transiences.append(transience)
+        resonances.append(novelty - transience)
+
+    return np.array(novelties), np.array(transiences), np.array(resonances)"""
+
+def novelty_transience_resonance(scale):
+    speech_start, speech_end = scoreable_range(scale)
+
+    centres = np.arange(speech_start, speech_end)
+
+        #window edges as row numbers
+    past_start = centres - scale
+    past_stop = centres
+    future_start = centres + 1
+    future_stop = centres + scale + 1
