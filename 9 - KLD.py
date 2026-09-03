@@ -168,8 +168,33 @@ def novelty_transience_resonance(scale):
 
     centres = np.arange(speech_start, speech_end)
 
-        #window edges as row numbers
+    #window edges as row numbers
     past_start = centres - scale
     past_stop = centres
     future_start = centres + 1
     future_stop = centres + scale + 1
+
+#mean of log2(mixture) across each window, read off the running totals
+    past_mean = (cumulative[past_stop] - cumulative[past_start]) / scale
+    future_mean = (cumulative[future_stop] - cumulative[future_start]) / scale
+
+    centre_mixtures = mixtures[centres]
+    centre_entropy = entropy[centres]
+
+    #KLD averaged over a window = -entropy(centre) - dot(centre, window mean)
+    novelty = -centre_entropy - (centre_mixtures * past_mean).sum(axis=1)
+    transience = -centre_entropy - (centre_mixtures * future_mean).sum(axis=1)
+    resonance = novelty - transience
+
+    return centres, novelty, transience, resonance
+
+#=========quick check on one scale
+#eyeball this before running all four
+
+centres, novelty, transience, resonance = novelty_transience_resonance(scales[0])
+
+print("scale", scales[0])
+print("scored:", len(centres))
+print("novelty     ", round(novelty.mean(), 3), "| range", round(novelty.min(), 3), "to", round(novelty.max(), 3))
+print("transience  ", round(transience.mean(), 3))
+print("resonance   ", round(resonance.mean(), 4))
