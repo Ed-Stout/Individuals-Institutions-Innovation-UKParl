@@ -125,18 +125,6 @@ print("running totals built:", cumulative.shape)
 print("memory:", round(cumulative.nbytes / 1e6, 1), "MB")
 
 """#=========Barron's original, for checking
-
-def barron_kld(pdists0, pdists1):
-    return (pdists1 * np.log2(pdists1 / pdists0)).sum(axis=1)
-
-def barron_ntr(thetas_arr, scale):
-    speechstart = scale
-    speechend = thetas_arr.shape[0] - scale
-
-    novelties = []
-    transiences = []
-    resonances = []
-
     for j in range(speechstart, speechend, 1):
         center_theta = thetas_arr[j]
 
@@ -198,3 +186,26 @@ print("scored:", len(centres))
 print("novelty     ", round(novelty.mean(), 3), "| range", round(novelty.min(), 3), "to", round(novelty.max(), 3))
 print("transience  ", round(transience.mean(), 3))
 print("resonance   ", round(resonance.mean(), 4))
+
+#=========run every scale=============
+results = corpus[["analysis_order", "original_analysis_order", "id", "date"]].copy()
+
+for scale in scales:
+    centres, novelty, transience, resonance = novelty_transience_resonance(scale)
+
+    results["novelty_" + str(scale)] = np.nan #speeches without a full window stay as blanks
+    results["transience_" + str(scale)] = np.nan
+    results["resonance_" + str(scale)] = np.nan
+
+    results.loc[centres, "novelty_" + str(scale)] = novelty
+    results.loc[centres, "transience_" + str(scale)] = transience
+    results.loc[centres, "resonance_" + str(scale)] = resonance
+
+    print("scale ", scale, "scored ", len(centres),
+          "novelty ", round(novelty.mean(), 3),
+          "transience ", round(transience.mean(), 3),
+          "resonance ", round(resonance.mean(), 4))
+
+results.to_csv(output_csv, index=False)
+print("saved:", output_csv)
+print(results.shape)
