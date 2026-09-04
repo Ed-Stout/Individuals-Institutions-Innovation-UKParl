@@ -124,33 +124,6 @@ cumulative[1:] = np.cumsum(log_mixtures, axis=0) #axis=0 accumulates down the sp
 print("running totals built:", cumulative.shape)
 print("memory:", round(cumulative.nbytes / 1e6, 1), "MB")
 
-"""#=========Barron's original, for checking
-    for j in range(speechstart, speechend, 1):
-        center_theta = thetas_arr[j]
-
-        after_boxend = j + scale + 1
-        before_boxstart = j - scale
-
-        before_theta_arr = thetas_arr[before_boxstart:j]
-        beforenum = before_theta_arr.shape[0]
-        before_centertheta_arr = np.tile(center_theta, reps=(beforenum, 1))
-
-        after_theta_arr = thetas_arr[j + 1:after_boxend]
-        afternum = after_theta_arr.shape[0]
-        after_centertheta_arr = np.tile(center_theta, reps=(afternum, 1))
-
-        before_KLDs = barron_kld(before_theta_arr, before_centertheta_arr)
-        after_KLDs = barron_kld(after_theta_arr, after_centertheta_arr)
-
-        novelty = np.mean(before_KLDs)
-        transience = np.mean(after_KLDs)
-
-        novelties.append(novelty)
-        transiences.append(transience)
-        resonances.append(novelty - transience)
-
-    return np.array(novelties), np.array(transiences), np.array(resonances)"""
-
 def novelty_transience_resonance(scale):
     speech_start, speech_end = scoreable_range(scale)
 
