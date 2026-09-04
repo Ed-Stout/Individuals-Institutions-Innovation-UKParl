@@ -24,7 +24,6 @@ with open(output_path / 'corpus.txt', encoding='utf-8') as f: #one string per sp
 
 print("documents:", len(texts))
 
-#token_pattern changed from Barron
 CVzer = CountVectorizer(token_pattern=r"(?u)\S+", max_features=None, lowercase=True) #text into nums, taken from Barron, no need to cap at 10000
 
 doc_vcnts = CVzer.fit_transform(texts)
@@ -54,7 +53,6 @@ print("rows:", doc_topic.shape[0], "should equal", len(texts))
 print("smallest probability:", doc_topic.min())   #must be > 0 for KLD
 
 #==========save============
-#np.save not np.savetxt - too slow to reload
 np.save(save_path / f'topic_mixtures_k{topicnum}.npy', doc_topic)
 np.save(save_path / f'topics_k{topicnum}.npy', topic_word)
 np.savetxt(save_path / f'loglik_full_k{topicnum}.txt', lda_model.loglikelihoods_) #change from barron to save space
