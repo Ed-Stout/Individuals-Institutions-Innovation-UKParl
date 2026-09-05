@@ -67,6 +67,38 @@ for record in ministers["memberships"]:
 
 print(len(roles_by_person), "people with non-committee roles") # check scale
 
+#==========cabinet / shadow cabinet definitions============
+cabinet_exact = { "the prime minister","the deputy prime minister","the chancellor of the exchequer","the chief secretary to the treasury", "chancellor of the duchy of lancaster", "minister for the cabinet office and chancellor of the duchy of lancaster", "the paymaster general and minister for the cabinet office", "lord president of the council and leader of the house of commons","the leader of the house of commons","minister for women and equalities","minister without portfolio"}                        
+shadow_cabinet_exact = {"leader of hm official opposition","shadow chancellor of the exchequer","shadow chief secretary to the treasury","shadow home secretary", "shadow foreign secretary", "shadow leader of the house of commons", "shadow chancellor of the duchy of lancaster","shadow first secretary of state","shadow deputy prime minister","shadow minister for women and equalities","shadow attorney general"}
+
+minor_party_markers = ["snp", "dup", "plaid", "shadow pc ", "liberal democrat", "lib dem",
+    "uup", "ulster unionist", "sdlp", "green party", "alliance", "independent"]
+
+def cabinet_rank(title):
+    clean = title.strip().lower()
+    if "under-secretary" in clean or "under secretary" in clean:
+        return False                      #junior 
+    if clean in cabinet_exact:
+        return True
+    if "secretary of state" in clean:
+        return True
+    return False
+
+def shadow_rank(title):
+    clean = title.strip().lower()
+    if clean in shadow_cabinet_exact:
+        return True
+    if "shadow secretary of state" in clean:
+        return True
+    return False
+
+def is_minor_party(title):
+    clean = " " + title.strip().lower() + " "   
+    for marker in minor_party_markers:
+        if marker in clean:
+            return True
+    return False
+
 #=====relate posts to each speech date====
 person_list = speeches["person_id"].tolist()
 date_list = speeches["date"].tolist()
@@ -150,6 +182,7 @@ for position in range(len(speeches)):
 
 speeches["role"] = roles
 speeches["role_tier"] = role_tiers
+speeches["gov_tier"] = gov_tiers   #finer split, sits alongside role_tier rather than replacing it
 
 speeches.to_csv(r"G:\My Drive\Birkbeck\Project\Hansard\hansard-speeches-2015_20-step3.csv", index=False)
 
@@ -158,3 +191,13 @@ print(len(speaker_names), len(gov_names), len(opp_names), len(speeches), "should
 print("speeches with no person_id:", speeches["person_id"].isna().sum())
 print("speech_order still sorted:", speeches["speech_order"].is_monotonic_increasing)
 print(speeches["role_tier"].value_counts())
+print(speeches["gov_tier"].value_counts())
+
+#gov_tier must be a strict refinement of role_tier - anything off the diagonal is a bug
+print(pd.crosstab(speeches["role_tier"], speeches["gov_tier"]))
+
+if speeches["gov_tier"].isna().sum() > 0:
+    raise SystemExit("gov_tier has blanks")
+
+if len(gov_tiers) != len(speeches):
+    raise SystemExit("gov_tier length does not match the speech count")
