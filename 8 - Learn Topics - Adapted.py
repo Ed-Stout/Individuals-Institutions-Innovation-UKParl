@@ -31,6 +31,9 @@ vocabulary = CVzer.get_feature_names_out()
 
 zero_rows = (doc_vcnts.sum(axis=1) == 0).sum() #each row token cnt
 
+if zero_rows > 0:
+    raise SystemExit("empty documents in corpus.txt - LDA cannot fit them")
+
 print("vocabulary:", len(vocabulary))
 print("total tokens:", doc_vcnts.sum()) #should equal num of tokens
 print("all-zero rows:", zero_rows) #should be 0
@@ -75,17 +78,17 @@ with open(save_path / f'topwords_k{topicnum}.txt', 'w', encoding='utf-8') as f:
 
 #==========record parameters ========
 with open(save_path / f'run_params_k{topicnum}.txt', 'w', encoding='utf-8') as f:
-    f.write("finished:", {datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
-    f.write("lda version:", {lda.__version__})
-    f.write("documents:", {len(texts)})
-    f.write("vocabulary:", {len(vocabulary)})
-    f.write("total tokens:", {doc_vcnts.sum()})
-    f.write("topics:", {topicnum})
-    f.write("iterations:", {n_iter})
-    f.write("alpha:", {alpha})
-    f.write("eta:", {eta})
-    f.write("random_state:", {random_state})
-    f.write("elapsed hours:" {round(elapsed / 3600, 2)})
-    f.write("final log likelihood:", {lda_model.loglikelihoods_[-1]})
+    f.write("finished: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
+    f.write("lda version: " + str(lda.__version__) + "\n")
+    f.write("documents: " + str(len(texts)) + "\n")
+    f.write("vocabulary: " + str(len(vocabulary)) + "\n")
+    f.write("total tokens: " + str(doc_vcnts.sum()) + "\n")
+    f.write("n_topics: " + str(topicnum) + "\n")
+    f.write("n_iter: " + str(n_iter) + "\n")
+    f.write("alpha: " + str(alpha) + "\n")
+    f.write("eta: " + str(eta) + "\n")
+    f.write("random_state: " + str(random_state) + "\n")
+    f.write("elapsed hours: " + str(round(elapsed / 3600, 2)) + "\n")
+    f.write("final log likelihood: " + str(lda_model.loglikelihoods_[-1]) + "\n")
 
 print("saved to:", save_path)

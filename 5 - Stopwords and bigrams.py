@@ -8,7 +8,7 @@ output_path = Path(r'G:\My Drive\Birkbeck\Project\Hansard')
 #output_csv = output_path / 'hansard_speeches_2015-20_step6.csv'
 output_csv = r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step6.csv'
 
-use_columns = ['id', 'display_as', 'party', 'date', 'speech_order', 'role', 'role_tier', 'tokens'] #took too long to run - use only essential columns
+use_columns = ['id', 'display_as', 'party', 'date', 'speech_order', 'role', 'role_tier', 'gov_tier', 'tokens'] #took too long to run - use only essential columns
 speeches = pd.read_csv(r'G:\My Drive\Birkbeck\Project\Hansard\hansard_speeches_2015-20_step5.csv', usecols=use_columns)
 
 pre_stops = [str(speech).split() for speech in speeches['tokens'].fillna('')] #fillna() adds empty string to empty cells
@@ -25,15 +25,15 @@ def word_cnt(token_list, output_csv):
     for token in token_list:
         doc_freq.update(set(token)) #changes to set
 
-    #print("Most common words")
-    #for word, n in counts.most_common(250): #most common words
-    #    print(word, n)
+    print("Most common words")
+    for word, n in counts.most_common(250): #most common words
+        print(word, n)
     
     cnt_table = pd.DataFrame(counts.most_common(1000), columns=['token', 'count'])
 
-    #print("Appears in most docs")
-    #for word, n in doc_freq.most_common(75):
-    #    print(word, round(n / len(token_list) * 100, 1), '%') #shows as %
+    print("Appears in most docs")
+    for word, n in doc_freq.most_common(75):
+        print(word, round(n / len(token_list) * 100, 1), '%') #shows as %
     
     doc_pcts = []
     for token in cnt_table['token']:
@@ -83,7 +83,7 @@ def phrase_detector(token_list, output_csv, min_count=100, threshold=15, use_con
 
     return phrased
 
-#word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
+word_cnt(pre_stops, 'pre_word_stop_frequencies.csv')
 
 #most common unhelpful words for analysis added to manual list
 parliamentary_stopwords = {'hon', 'friend', 'gentleman', 'lady', 'member', 'house', 'speaker',
@@ -101,13 +101,15 @@ for tokens in pre_stops:
     removed = [word for word in tokens if word not in spacy_stops] #keep the word if not in spacy_stops
     post_spacy_stops.append(removed)
 
-del pre_stops #reduce load
+ #reduce load
 
-#word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
+word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
 #includes the top procedural phrases from earlier analysis which are not useful topics for analysis
 
 #=====compare the two phrases routes======= decide on connectors
-#phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True) #com
+phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True) #com
+del pre_stops
+
 phrased_b = phrase_detector(post_spacy_stops, 'phrases_route_b.csv', use_connectors=False)
 
 del post_spacy_stops #prevent runtime issues

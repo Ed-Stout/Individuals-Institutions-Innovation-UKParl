@@ -10,13 +10,13 @@ speeches = df['speech'].fillna('').astype(str).tolist() #fillna needed bc of iss
 tokenised_speeches = [] 
 
 count = 0
-for speech in nlp.pipe(speeches, batch_size=200): #batched approach is quicker
+for speech in nlp.pipe(speeches, batch_size=50): #batched approach is quicker
     lemmas = [token.lemma_ for token in speech
         if not token.is_punct #remove punctuation
         and token.lemma_ not in ("'s", "’s") #should work now - a fair few missing previously
         and not token.is_space # remove whitespace
         and not token.like_num] #remove numbers
-    count += 200
+    count += 1
     if count % 20000 == 0:
         print(count, "speeches tokenised")
     tokens = [lemma.lower() for lemma in lemmas] #lowercase after lemmatising

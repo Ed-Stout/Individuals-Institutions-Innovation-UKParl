@@ -51,7 +51,6 @@ for record in ministers["memberships"]:
         continue
 
     person = record["person_id"] #join later
-
     end_date = record.get("end_date") #date they left role
     if not end_date:                    #blanks here mean they are still in the role (unlikely due to age of data)
         end_date = "3000-12-31"
@@ -68,8 +67,14 @@ for record in ministers["memberships"]:
 print(len(roles_by_person), "people with non-committee roles") # check scale
 
 #==========cabinet / shadow cabinet definitions============
-cabinet_exact = { "the prime minister","the deputy prime minister","the chancellor of the exchequer","the chief secretary to the treasury", "chancellor of the duchy of lancaster", "minister for the cabinet office and chancellor of the duchy of lancaster", "the paymaster general and minister for the cabinet office", "lord president of the council and leader of the house of commons","the leader of the house of commons","minister for women and equalities","minister without portfolio"}                        
-shadow_cabinet_exact = {"leader of hm official opposition","shadow chancellor of the exchequer","shadow chief secretary to the treasury","shadow home secretary", "shadow foreign secretary", "shadow leader of the house of commons", "shadow chancellor of the duchy of lancaster","shadow first secretary of state","shadow deputy prime minister","shadow minister for women and equalities","shadow attorney general"}
+cabinet_exact = { "the prime minister","the deputy prime minister","the chancellor of the exchequer","the chief secretary to the treasury", 
+                 "chancellor of the duchy of lancaster", "minister for the cabinet office and chancellor of the duchy of lancaster", 
+                 "the paymaster general and minister for the cabinet office", "lord president of the council and leader of the house of commons",
+                 "the leader of the house of commons","minister for women and equalities","minister without portfolio"}     
+                   
+shadow_cabinet_exact = {"leader of hm official opposition","shadow chancellor of the exchequer","shadow chief secretary to the treasury",
+                        "shadow home secretary", "shadow foreign secretary", "shadow leader of the house of commons", "shadow chancellor of the duchy of lancaster",
+                        "shadow first secretary of state","shadow deputy prime minister","shadow minister for women and equalities"}
 
 minor_party_markers = ["snp", "dup", "plaid", "shadow pc ", "liberal democrat", "lib dem",
     "uup", "ulster unionist", "sdlp", "green party", "alliance", "independent"]
@@ -152,6 +157,7 @@ chair_roles = ["Speaker of the House of Commons", #speaker roles are important t
 
 role_tiers = []
 roles = []
+gov_tiers = []
 
 for position in range(len(speeches)):
     speaker_role = speaker_names[position]
@@ -167,18 +173,52 @@ for position in range(len(speeches)):
     if is_chair:
         role_tiers.append("chair")
         roles.append(speaker_role)
+        gov_tiers.append("chair")
+
     elif gov_role is not None:
         role_tiers.append("government")
         roles.append(gov_role)
+
+        in_cabinet = False
+        for title in gov_role.split("; "):
+            if cabinet_rank(title):
+                in_cabinet = True
+
+        if in_cabinet:
+            gov_tiers.append("cabinet")
+        else:
+            gov_tiers.append("other government")
+
     elif opp_role is not None:
         role_tiers.append("opposition")
         roles.append(opp_role)
-    elif speaker_role is not None:      
+
+        in_shadow_cabinet = False
+        any_official = False   #any post held for the official Opposition rather than a minor party
+
+        for title in opp_role.split("; "):
+            if is_minor_party(title):
+                continue       #minor parties hold no Shadow Cabinet, so skip before ranking
+            any_official = True
+            if shadow_rank(title):
+                in_shadow_cabinet = True
+
+        if in_shadow_cabinet:
+            gov_tiers.append("shadow cabinet")
+        elif any_official:
+            gov_tiers.append("other opposition")
+        else:
+            gov_tiers.append("minor party frontbench")
+
+    elif speaker_role is not None:
         role_tiers.append("backbencher")
         roles.append(speaker_role)
+        gov_tiers.append("backbencher")
+
     else:
         role_tiers.append("backbencher") #no role, backbencher assumed
         roles.append(None)
+        gov_tiers.append("backbencher")
 
 speeches["role"] = roles
 speeches["role_tier"] = role_tiers
@@ -192,9 +232,6 @@ print("speeches with no person_id:", speeches["person_id"].isna().sum())
 print("speech_order still sorted:", speeches["speech_order"].is_monotonic_increasing)
 print(speeches["role_tier"].value_counts())
 print(speeches["gov_tier"].value_counts())
-
-#gov_tier must be a strict refinement of role_tier - anything off the diagonal is a bug
-print(pd.crosstab(speeches["role_tier"], speeches["gov_tier"]))
 
 if speeches["gov_tier"].isna().sum() > 0:
     raise SystemExit("gov_tier has blanks")

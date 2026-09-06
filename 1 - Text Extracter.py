@@ -7,7 +7,6 @@ order_csv = r"G:\My Drive\Birkbeck\Project\Hansard\speech_order_2015-20.csv"
 kept_chunks = []
 chunk_cnt = 0
 years = ["2015", "2016", "2017", "2018", "2019", "2020"]
-#years = ["2016"]
 
 for chunk in pd.read_csv(input_csv, chunksize=100000, dtype=str):
     matching_rows = chunk[chunk["year"].isin(years)]
@@ -59,7 +58,7 @@ for position in range(len(all_speeches)): #give position
 all_speeches["speech_order"] = speech_order
 
 print(all_speeches["date"].min(), all_speeches["date"].max())
-print(f"kept {len(all_speeches)} speeches")
+print("kept ", len(all_speeches), "speeches")
 
 all_speeches.to_csv(output_csv, index=False)
 
