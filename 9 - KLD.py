@@ -109,6 +109,13 @@ for break_date in parliament_breaks:
 
     first_row = int(np.argmax(after_break.to_numpy()))
     print("break", break_date, "first row: ", first_row, "last sitting: ", str(corpus["date"].iloc[first_row - 1])[:10])
+
+n_blocks = block_id.max() + 1
+print("blocks:", n_blocks)
+
+for block in range(n_blocks):
+    print(" block", block, "rows:", int((block_id == block).sum()))
+
 keep = np.array(keep) #needs to be array to filter
 
 print("dropping", len(corpus) - keep.sum(), "chair speeches") #cnt
@@ -147,6 +154,20 @@ weighted = mixtures * log_mixtures #each topic's probability times its own log
 entropy = -weighted.sum(axis=1) #add up each row and make it positive, one per speech
 
 del weighted
+
+log_mixtures *= in_window[:, None] #in place - a second full-size array would cost 290MB
+
+n_topics = mixtures.shape[1]
+
+cumulative = np.zeros((n_speeches + 1, n_topics))
+np.cumsum(log_mixtures, axis=0, out=cumulative[1:]) #out= writes straight in, no temporary copy
+
+del log_mixtures
+
+cumulative_count = np.zeros(n_speeches + 1)
+np.cumsum(in_window, out=cumulative_count[1:])
+
+print("running totals:", cumulative.shape, " ", round(cumulative.nbytes / 1e6, 1), "MB")
 
 n_speeches = len(corpus)
 n_topics = mixtures.shape[1]  #(rows, columns)
