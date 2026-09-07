@@ -2,15 +2,22 @@ import numpy as np
 import pandas as pd
 import os
 
-scales = [60,250,1000,7500] #non-chair speeches - x8.5 more than Barron
+scales = [1,60,250,1000,7500] #non-chair speeches - x8.5 more than Barron
 
-window_excluded_tiers = ["chair"]
+chair_in_windows = False  #False follows Barron SI 2.4 - chairs contribute nothing to a window
+chair_as_centre = True    #True scores chairs as centres, so the chair tier reaches script 12
+
+chair_tier = "chair"
 all_tiers = ["chair", "government", "opposition", "backbencher"]
 
 source = r"G:\My Drive\Birkbeck\Project\Hansard"
 topic_mixtures_npy = os.path.join(source, "topic_mixtures_k100.npy")
 corpus_csv = os.path.join(source, "Hansard_2015-20_final_corpus.csv")
 output_csv = os.path.join(source, "hansard_ntr_by_scale.csv")
+
+for scale in scales: #scale 0 would divide by nothing
+    if scale < 1:
+        raise SystemExit("scale below 1: " + str(scale))
 
 #=============load topics=================
 mixtures = np.load(topic_mixtures_npy)
@@ -67,16 +74,41 @@ for tier in all_tiers: #added after issue
         raise SystemExit("missing role tier, check spelling")
 
 #=========remove chairs ======================================
-role_tiers = corpus["role_tier"].tolist()
+role_tiers = corpus["role_tier"].to_numpy()
 
-keep = []
+in_window = []
+is_centre = []
 
 for tier in role_tiers:
-    if tier in window_excluded_tiers:
-        keep.append(False) #chair gets dropped
+    if tier == chair_tier and not chair_in_windows:
+        in_window.append(0.0)
     else:
-        keep.append(True)
+        in_window.append(1.0)
 
+    if tier == chair_tier and not chair_as_centre:
+        is_centre.append(False)
+    else:
+        is_centre.append(True)
+
+in_window = np.array(in_window)
+is_centre = np.array(is_centre)
+
+n_speeches = len(corpus)
+
+print("contributing to windows:", int(in_window.sum()), "of", n_speeches)
+print("eligible as centres:   ", int(is_centre.sum()), "of", n_speeches)
+
+if in_window.sum() == 0:
+    raise SystemExit("every speech masked out of windows, check chair_tier spelling")
+
+block_id = np.zeros(n_speeches, dtype=int)
+
+for break_date in parliament_breaks:
+    after_break = corpus["date"] > = pd.Timestamp(break_date)
+    block_id = block_id + after_break.to_numpy().astype(int)
+
+    first_row = int(np.argmax(after_break.to_numpy()))
+    print("break", break_date, "first row: ", first_row, "last sitting: ", str(corpus["date"].iloc[first_row - 1])[:10])
 keep = np.array(keep) #needs to be array to filter
 
 print("dropping", len(corpus) - keep.sum(), "chair speeches") #cnt
