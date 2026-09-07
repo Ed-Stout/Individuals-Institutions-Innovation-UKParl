@@ -1,8 +1,8 @@
-#K samples tests
-import sys
+#K samples tests - used to check which one of K=50, K=100, or K=150 should be completed
 import time
 import numpy as np
 from pathlib import Path
+from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 import lda
 
@@ -11,12 +11,18 @@ save_path = Path(r"G:\My Drive\Birkbeck\Project\Hansard")
 save_path.mkdir(parents=True, exist_ok=True)
 
 #=======parameters =========
-#sample_size = 50000
+k_values = [50, 100, 150]
 n_iter = 1500
 alpha = 0.1
 eta = 0.01
 random_state = 42
-topicnum = 100
+#topicnum = 100
+
+test_fraction = 0.2 #testing - holdout
+min_test_tokens = 10 #below too nisy
+chunk_size = 500
+
+rng = np.random.default_rng(random_state)
 
 #=======evenly spaced sample, not the first n=========
 all_texts = []
