@@ -20,48 +20,44 @@ for tokens in input_tokens:
             keep_words.append(word)
     post_length.append(keep_words)
 
-#==========vocabulary cap============
-kept_tokens = post_length              #pre-cap
-kept_rows = list(range(len(post_length)))#positions in speeches
-pass_number = 0
+#==========short speech removal============
+kept_tokens = []
+kept_rows = []
 
-while True:
-    pass_number += 1
+for position in range(len(post_length)):
+    if len(post_length[position]) >= min_doc_tokens:
+        kept_tokens.append(post_length[position])
+        kept_rows.append(position)
 
-    counts = Counter()
-    for tokens in kept_tokens:
-        counts.update(tokens)
+print("Speeches under min_doc_tokens:", len(post_length) - len(kept_tokens))
 
-    common_words = set()
-    for word, n in counts.most_common(vocab_size):
-        common_words.add(word)
+counts = Counter() #cap
+for tokens in kept_tokens:
+    counts.update(tokens)
 
-    capped = []
-    for tokens in kept_tokens:
-        keep_words = []
-        for word in tokens:
-            if word in common_words:
-                keep_words.append(word)
-        capped.append(keep_words)
+common_words = set()
+for word, n in counts.most_common(vocab_size):
+    common_words.add(word)
 
-    #survivors carry their pre-cap tokens forward, so the next pass recounts from scratch
-    survivor_tokens = []
-    survivor_rows = []
-    for position in range(len(capped)):
-        if len(capped[position]) >= min_doc_tokens:
-            survivor_tokens.append(kept_tokens[position])
-            survivor_rows.append(kept_rows[position])
+post_vocab = []
+final_rows = []
+emptied = 0
 
-    removed = len(kept_tokens) - len(survivor_tokens)
-    print("pass", pass_number," vocabulary", len(common_words), " removed", removed," remaining", len(survivor_tokens))
+for position in range(len(kept_tokens)):
+    keep_words = []
+    for word in kept_tokens[position]:
+        if word in common_words:
+            keep_words.append(word)
 
-    kept_tokens = survivor_tokens
-    kept_rows = survivor_rows
+    if len(keep_words) == 0:        #LDA cannot fit an all-zero row
+        emptied += 1
+        continue
 
-    if removed == 0:      #nothing left to remove, so the vocabulary is now stable
-        break
+    post_vocab.append(keep_words)
+    final_rows.append(kept_rows[position])
 
-post_vocab = capped       #aligned with kept_rows, since the final pass removed nothing
+kept_rows = final_rows
+print("Speeches emptied by the cap:", emptied)
 
 #==========tokens before and after=====
 pre_token_cnt = 0
@@ -72,7 +68,6 @@ post_token_cnt = 0
 for tokens in post_vocab:
     post_token_cnt += len(tokens)
 
-print("Passes needed:", pass_number)
 print("Unique tokens available:", len(counts))
 print("Vocabulary kept:", len(common_words))
 print("Tokens before:", pre_token_cnt)

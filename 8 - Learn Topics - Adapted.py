@@ -55,7 +55,6 @@ print("doc_topic shape:", doc_topic.shape)
 print("rows:", doc_topic.shape[0], "should equal", len(texts))
 print("smallest probability:", doc_topic.min())   #must be > 0 for KLD
 
-#==========save============
 np.save(save_path / f'topic_mixtures_k{topicnum}.npy', doc_topic)
 np.save(save_path / f'topics_k{topicnum}.npy', topic_word)
 np.savetxt(save_path / f'loglik_full_k{topicnum}.txt', lda_model.loglikelihoods_) #change from barron to save space
@@ -76,19 +75,19 @@ with open(save_path / f'topwords_k{topicnum}.txt', 'w', encoding='utf-8') as f:
         f.write("topic " + str(k) + ": " + word_list + "\n")
         
 
-#==========record parameters ========
-with open(save_path / f'run_params_k{topicnum}.txt', 'w', encoding='utf-8') as f:
-    f.write("finished: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
-    f.write("lda version: " + str(lda.__version__) + "\n")
-    f.write("documents: " + str(len(texts)) + "\n")
-    f.write("vocabulary: " + str(len(vocabulary)) + "\n")
-    f.write("total tokens: " + str(doc_vcnts.sum()) + "\n")
-    f.write("n_topics: " + str(topicnum) + "\n")
-    f.write("n_iter: " + str(n_iter) + "\n")
-    f.write("alpha: " + str(alpha) + "\n")
-    f.write("eta: " + str(eta) + "\n")
-    f.write("random_state: " + str(random_state) + "\n")
-    f.write("elapsed hours: " + str(round(elapsed / 3600, 2)) + "\n")
-    f.write("final log likelihood: " + str(lda_model.loglikelihoods_[-1]) + "\n")
+#==========all parameters ========
+with open(save_path / f'run_params_k{topicnum}.txt', 'w', encoding='utf-8') as f: #file name according to topics
+    f.write("finished: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    f.write("lda version: ", (lda.__version__))
+    f.write("documents: ",(len(texts)))
+    f.write("vocabulary: ", (len(vocabulary)))
+    f.write("total tokens: ",(doc_vcnts.sum()))
+    f.write("n_topics: ",(topicnum))
+    f.write("n_iter: ",(n_iter))
+    f.write("alpha: ",(alpha))
+    f.write("eta: ",(eta))
+    f.write("random_state: ",(random_state))
+    f.write("elapsed hours: ",(round(elapsed / 3600, 2)))
+    f.write("final log likelihood: ",(lda_model.loglikelihoods_[-1]))
 
 print("saved to:", save_path)
