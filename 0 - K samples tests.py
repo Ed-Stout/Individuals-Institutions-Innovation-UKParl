@@ -15,7 +15,7 @@ n_iter = 1500
 alpha = 0.1
 eta = 0.01
 random_state = 42
-topicnum = 100
+topicnum = 50
 
 #=======evenly spaced sample, not the first n=========
 all_texts = []

@@ -101,14 +101,11 @@ for tokens in pre_stops:
     removed = [word for word in tokens if word not in spacy_stops] #keep the word if not in spacy_stops
     post_spacy_stops.append(removed)
 
- #reduce load
-
 word_cnt(post_spacy_stops, 'post_word_stop_frequencies.csv')
-#includes the top procedural phrases from earlier analysis which are not useful topics for analysis
 
 #=====compare the two phrases routes======= decide on connectors
-phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True) #com
-del pre_stops
+#phrased_a = phrase_detector(pre_stops, 'phrases_route_a.csv', use_connectors=True) #com
+#del pre_stops
 
 phrased_b = phrase_detector(post_spacy_stops, 'phrases_route_b.csv', use_connectors=False)
 

@@ -12,10 +12,10 @@ print("Rows removed: ", len(excluded))
 df = df[~df['speech_class'].isin(drop_speeches)]
 
 no_person = df['person_id'].isna()
-print("no person_id but has mnis_id: ", (no_person & df['mnis_id'].notna()).sum())
+print("no person_id but has mnis_id: ", (no_person & df['mnis_id'].notna()).sum()) #where both are missing
 
 excluded_speaker = df[no_person]
-print("Unattributed speeches removed: ", len(excluded_speaker))
+print("Unattributed speeches removed: ", len(excluded_speaker)) #cnt for write up
 print(excluded_speaker['display_as'].value_counts(dropna=False).head(10))
 
 excluded_speaker.to_csv(excluded_csv, index=False, encoding='utf-8') #audit trail
