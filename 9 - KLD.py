@@ -1,23 +1,19 @@
+#9 - KLD. Novelty, transience, and resonance calculated across the whole corpus
+
 import numpy as np
 import pandas as pd
 import os
 
 scales = [1,60,250,1000,7500] #non-chair speeches - x8.5 more than Barron
-
-chair_in_windows = False  #False follows Barron SI 2.4 - chairs contribute nothing to a window
-chair_as_centre = True    #True scores chairs as centres, so the chair tier reaches script 12
-
-chair_tier = "chair"
+chunk_size = 25000 #centres per block - whole-array version runs out of memory at scale 1
+window_excluded_tiers = ["chair"]
 all_tiers = ["chair", "government", "opposition", "backbencher"]
 
 source = r"G:\My Drive\Birkbeck\Project\Hansard"
-topic_mixtures_npy = os.path.join(source, "topic_mixtures_k100.npy")
+lda_output = r"C:\Dissertation Project\LDA_output" #script 8 saves here, not to Drive
+topic_mixtures_npy = os.path.join(lda_output, "topic_mixtures_k100.npy")
 corpus_csv = os.path.join(source, "Hansard_2015-20_final_corpus.csv")
 output_csv = os.path.join(source, "hansard_ntr_by_scale.csv")
-
-for scale in scales: #scale 0 would divide by nothing
-    if scale < 1:
-        raise SystemExit("scale below 1: " + str(scale))
 
 #=============load topics=================
 mixtures = np.load(topic_mixtures_npy)
@@ -25,17 +21,11 @@ mixtures = np.load(topic_mixtures_npy)
 print("topic mixtures:", mixtures.shape)
 print("size:", round(mixtures.nbytes / 1e6, 1), "MB") #size
 
-use_columns = ["id", "analysis_order","speech_order", "date",  "display_as","person_id", "party",
-               "role", "role_tier", "major_heading", "minor_heading"]
-
+use_columns = ["id", "analysis_order", "speech_order", "date", "role_tier"] #only what this script reads
 corpus = pd.read_csv(corpus_csv, usecols=use_columns, parse_dates=["date"]) #
 print("corpus loaded:", corpus.shape)
 
 corpus = corpus.sort_values("analysis_order").reset_index(drop=True)#align 
-
-ordered_corpus = corpus["analysis_order"].to_numpy() #get rid
-order_base = ordered_corpus[0]
-expected_order = np.arange(order_base, order_base + len(corpus)) #to check against
 
 row_sums = mixtures.sum(axis=1) #sums to one across topics
 print("row sums max:", row_sums.max())
@@ -47,16 +37,10 @@ if not np.allclose(row_sums, 1.0):
 print(corpus["role_tier"].value_counts())
 
 #=================checks======================
-
 if len(corpus) != mixtures.shape[0]:
     print("corpus rows:", len(corpus))
     print("mixtures rows:", mixtures.shape[0])
     raise SystemExit("mixtures and topic mixture row counts differ")
-
-if not np.array_equal(ordered_corpus, expected_order): #get rid
-    print("first five values:", ordered_corpus[:5])
-    print("duplicates:", len(ordered_corpus) - len(set(ordered_corpus))) 
-    raise SystemExit("analysis is not in order!")
 
 if not corpus["speech_order"].is_monotonic_increasing:
     raise SystemExit("speeches not in order!")
@@ -73,48 +57,19 @@ for tier in all_tiers: #added after issue
         print(corpus["role_tier"].value_counts())
         raise SystemExit("missing role tier, check spelling")
 
-#=========remove chairs ======================================
-role_tiers = corpus["role_tier"].to_numpy()
+for scale in scales: #scale 0 would divide by nothing
+    if scale < 1:
+        raise SystemExit("scale below 1: " + str(scale))
 
-in_window = []
-is_centre = []
+#=========remove chairs ======================================
+role_tiers = corpus["role_tier"].tolist()
+keep = []
 
 for tier in role_tiers:
-    if tier == chair_tier and not chair_in_windows:
-        in_window.append(0.0)
+    if tier in window_excluded_tiers:
+        keep.append(False) #chair gets dropped
     else:
-        in_window.append(1.0)
-
-    if tier == chair_tier and not chair_as_centre:
-        is_centre.append(False)
-    else:
-        is_centre.append(True)
-
-in_window = np.array(in_window)
-is_centre = np.array(is_centre)
-
-n_speeches = len(corpus)
-
-print("contributing to windows:", int(in_window.sum()), "of", n_speeches)
-print("eligible as centres:   ", int(is_centre.sum()), "of", n_speeches)
-
-if in_window.sum() == 0:
-    raise SystemExit("every speech masked out of windows, check chair_tier spelling")
-
-block_id = np.zeros(n_speeches, dtype=int)
-
-for break_date in parliament_breaks:
-    after_break = corpus["date"] > = pd.Timestamp(break_date)
-    block_id = block_id + after_break.to_numpy().astype(int)
-
-    first_row = int(np.argmax(after_break.to_numpy()))
-    print("break", break_date, "first row: ", first_row, "last sitting: ", str(corpus["date"].iloc[first_row - 1])[:10])
-
-n_blocks = block_id.max() + 1
-print("blocks:", n_blocks)
-
-for block in range(n_blocks):
-    print(" block", block, "rows:", int((block_id == block).sum()))
+        keep.append(True)
 
 keep = np.array(keep) #needs to be array to filter
 
@@ -125,20 +80,15 @@ mixtures = mixtures[keep]
 if len(corpus) != mixtures.shape[0]:
     raise SystemExit("corpus and mixtures out of step after filtering!")
 
-for scale in scales: #get rid
-    if 2 * scale >= len(corpus):
-        raise SystemExit("scale " + str(scale) + " too big for corpus")
-
-corpus["original_analysis_order"] = corpus["analysis_order"]   #the real key - joins back to the corpus
-corpus["kld_row"] = np.arange(len(corpus))                     #position in the chair-free sequence, for reading only
-corpus = corpus.drop(columns=["analysis_order"])               #don't ship two different meanings under one name
+corpus["original_analysis_order"] = corpus["analysis_order"] #joins back to the corpus
+corpus["kld_row"] = np.arange(len(corpus))  #position in the chairless sequence
+corpus = corpus.drop(columns=["analysis_order"]) #don't ship two different meanings under one name
 
 #checks
 print("corpus now:", corpus.shape)
 print(corpus["role_tier"].value_counts())
 
 #=========scoreable range=================
-#first and last w speeches have nothing on one side
 def scoreable_range(scale):
     speech_start = scale
     speech_end = len(corpus) - scale
@@ -146,7 +96,7 @@ def scoreable_range(scale):
 
 for scale in scales:
     start, end = scoreable_range(scale)
-    print("scale", scale, "| scoreable", end - start, "of", len(corpus))
+    print("scale: ", scale, "scoreable: ", end - start, "of: ", len(corpus))
 
 #=========running totals=======================
 log_mixtures = np.log2(mixtures) #how spread out each speech is across the 100 topics
@@ -155,28 +105,14 @@ entropy = -weighted.sum(axis=1) #add up each row and make it positive, one per s
 
 del weighted
 
-log_mixtures *= in_window[:, None] #in place - a second full-size array would cost 290MB
-
-n_topics = mixtures.shape[1]
-
-cumulative = np.zeros((n_speeches + 1, n_topics))
-np.cumsum(log_mixtures, axis=0, out=cumulative[1:]) #out= writes straight in, no temporary copy
-
-del log_mixtures
-
-cumulative_count = np.zeros(n_speeches + 1)
-np.cumsum(in_window, out=cumulative_count[1:])
-
-print("running totals:", cumulative.shape, " ", round(cumulative.nbytes / 1e6, 1), "MB")
-
 n_speeches = len(corpus)
 n_topics = mixtures.shape[1]  #(rows, columns)
 
 cumulative = np.zeros((n_speeches + 1, n_topics)) #goes down the rows
-cumulative[1:] = np.cumsum(log_mixtures, axis=0) #axis=0 accumulates down the speeches
+np.cumsum(log_mixtures, axis=0, out=cumulative[1:]) #axis=0 accumulates down the speeches, out= avoids a temporary copy
 
 print("running totals built:", cumulative.shape)
-print("memory:", round(cumulative.nbytes / 1e6, 1), "MB")
+print("memory:", round(cumulative.nbytes / 1e6, 1), "MB") #added because of many errors
 
 del log_mixtures
 
@@ -184,35 +120,30 @@ def novelty_transience_resonance(scale):
     speech_start, speech_end = scoreable_range(scale)
 
     centres = np.arange(speech_start, speech_end)
+    novelty = np.zeros(len(centres))
+    transience = np.zeros(len(centres))
 
-    #window edges as row numbers
-    past_start = centres - scale
-    past_stop = centres
-    future_start = centres + 1
-    future_stop = centres + scale + 1
+    for chunk_start in range(0, len(centres), chunk_size): #chunked to keep temporaries small
+        chunk_stop = min(chunk_start + chunk_size, len(centres))
+        chunk_centres = centres[chunk_start:chunk_stop]
 
-#mean of log2(mixture) across each window, read off the running totals
-    past_mean = (cumulative[past_stop] - cumulative[past_start]) / scale
-    future_mean = (cumulative[future_stop] - cumulative[future_start]) / scale
+        past_start = chunk_centres - scale #window edges as row numbers
+        past_stop = chunk_centres
+        future_start = chunk_centres + 1
+        future_stop = chunk_centres + scale + 1
 
-    centre_mixtures = mixtures[centres]
-    centre_entropy = entropy[centres]
+        past_mean = (cumulative[past_stop] - cumulative[past_start]) / scale #mean of log2(mixture) across each window, read off the running totals
+        future_mean = (cumulative[future_stop] - cumulative[future_start]) / scale
 
-    #KLD averaged over a window = -entropy(centre) - dot(centre, window mean)
-    novelty = -centre_entropy - (centre_mixtures * past_mean).sum(axis=1)
-    transience = -centre_entropy - (centre_mixtures * future_mean).sum(axis=1)
+        centre_mixtures = mixtures[chunk_centres]
+        centre_entropy = entropy[chunk_centres]
+
+        novelty[chunk_start:chunk_stop] = -centre_entropy - (centre_mixtures * past_mean).sum(axis=1) #KLD averaged over a window = -entropy(centre) - dot(centre, window mean)
+        transience[chunk_start:chunk_stop] = -centre_entropy - (centre_mixtures * future_mean).sum(axis=1)
+
     resonance = novelty - transience
 
     return centres, novelty, transience, resonance
-
-#=========quick check on one scale
-centres, novelty, transience, resonance = novelty_transience_resonance(scales[0])
-
-print("scale", scales[0])
-print("scored:", len(centres))
-print("novelty     ", round(novelty.mean(), 3), "| range", round(novelty.min(), 3), "to", round(novelty.max(), 3))
-print("transience  ", round(transience.mean(), 3))
-print("resonance   ", round(resonance.mean(), 4))
 
 #=========run every scale=============
 results = corpus[["kld_row", "original_analysis_order", "id", "date"]].copy()
@@ -228,10 +159,7 @@ for scale in scales:
     results.loc[centres, "transience_" + str(scale)] = transience
     results.loc[centres, "resonance_" + str(scale)] = resonance
 
-    print("scale ", scale, "scored ", len(centres),
-          "novelty ", round(novelty.mean(), 3),
-          "transience ", round(transience.mean(), 3),
-          "resonance ", round(resonance.mean(), 4))
+    print("Scale: ", scale, "Scored: ", len(centres),"Novelty: ", round(novelty.mean(), 3),"Transience: ", round(transience.mean(), 3),"Resonance: ", round(resonance.mean(), 4))
 
 results.to_csv(output_csv, index=False)
 print("saved:", output_csv)
