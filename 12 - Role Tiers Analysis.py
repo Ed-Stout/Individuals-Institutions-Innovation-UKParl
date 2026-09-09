@@ -3,9 +3,9 @@ import pandas as pd
 import os
 import statsmodels.formula.api as smf
 
-scales = [1, 60, 250, 1000, 7500]
+scales = [1, 60, 250, 1000, 7500] #must match NTR
 
-alpha = 0.01 #99% CIs, as Barron
+alpha = 0.01 #99% confidence intervals, per barron
 reference_tier = "backbencher" #baseline all other tiers are measured against
 
 source = r"G:\My Drive\Birkbeck\Project\Hansard"
@@ -16,19 +16,19 @@ role_csv = os.path.join(source, "gamma_by_role.csv")
 #=========load and merge
 ntr = pd.read_csv(ntr_csv)
 
-roles = pd.read_csv(corpus_csv, usecols=["analysis_order", "role_tier", "party", "display_as"])
+roles = pd.read_csv(corpus_csv, usecols=["analysis_order", "role_tier", "party", "display_as"]) #only what is needed for memory
 roles = roles.rename(columns={"analysis_order": "original_analysis_order"})
 
-merged = ntr.merge(roles, on="original_analysis_order", how="left")
+merged = ntr.merge(roles, on="original_analysis_order", how="left") #left join
 
 print("merged:", merged.shape)
 
 if len(merged) != len(ntr):
-    raise SystemExit("merge changed the row count - duplicate keys?")
+    raise SystemExit("merge changed the row count - duplicate keys?") #check
 
 if merged["role_tier"].isna().any():
     print("unmatched rows:", merged["role_tier"].isna().sum())
-    raise SystemExit("some speeches did not pick up a role")
+    raise SystemExit("some speeches did not pick up a role") #check
 
 print(merged["role_tier"].value_counts())
 
@@ -47,20 +47,21 @@ role_results = []
 
 for scale in scales:
     model_data = merged[["z_novelty_" + str(scale),"z_resonance_" + str(scale),"role_tier"]].dropna()
-    model_data.columns = ["z_novelty", "z_resonance", "role_tier"]
+    model_data.columns = ["z_novelty", "z_resonance", "role_tier"] #fixed names so one formula works for all scales
     model_data["role_tier"] = pd.Categorical(model_data["role_tier"], categories=[reference_tier] + other_tiers)
 
-    model = smf.ols("z_resonance ~ z_novelty * role_tier", data=model_data).fit()
-    confidence = model.conf_int(alpha=alpha)
+    model = smf.ols("z_resonance ~ z_novelty * role_tier", data=model_data).fit() #resonance explained by novelty
+    confidence = model.conf_int(alpha=alpha) #CI
 
-    print("")
-    print("=== scale", scale, "| n", int(model.nobs), "| R2", round(model.rsquared, 4))
+    print("Scale: ", scale, " Number of obs: ", int(model.nobs), " R squared: ", round(model.rsquared, 4))
 
-    base_gamma = model.params["z_novelty"]
-    print(reference_tier, "gamma:", round(base_gamma, 4))
+    base_gamma = model.params["z_novelty"] #backbencher gamma not averag
+    print(reference_tier, "gamma: ", round(base_gamma, 4))
+
+    prefix = "z_novelty:role_tier[T."
 
     for tier in other_tiers:
-        name = "z_novelty:role_tier[T." + tier + "]"
+        name = prefix + tier + "]" #novelty per tier name
         difference = model.params[name]
 
         role_results.append({"scale": scale, "tier": tier, "gamma": base_gamma + difference, "difference": difference, "ci_low_difference": confidence.loc[name, 0],
@@ -72,6 +73,5 @@ for scale in scales:
 role_table = pd.DataFrame(role_results)
 role_table.to_csv(role_csv, index=False)
 
-print("")
 print("saved:", role_csv)
 print("rows:", len(role_table))
