@@ -1,11 +1,10 @@
 #9 - KLD. Novelty, transience, and resonance calculated across the whole corpus
-
 import numpy as np
 import pandas as pd
 import os
 
-scales = [1,60,250,1000,7500] #non-chair speeches - x8.5 more than Barron
-chunk_size = 25000 #centres per block - whole-array version runs out of memory at scale 1
+scales = [1,60,250,1000,7500] 
+chunk_size = 25000 #centres per block - whole-array version runs out of memory
 window_excluded_tiers = ["chair"]
 all_tiers = ["chair", "government", "opposition", "backbencher"]
 
@@ -72,7 +71,6 @@ for tier in role_tiers:
         keep.append(True)
 
 keep = np.array(keep) #needs to be array to filter
-
 print("dropping", len(corpus) - keep.sum(), "chair speeches") #cnt
 
 corpus = corpus[keep].reset_index(drop=True)
@@ -81,10 +79,9 @@ if len(corpus) != mixtures.shape[0]:
     raise SystemExit("corpus and mixtures out of step after filtering!")
 
 corpus["original_analysis_order"] = corpus["analysis_order"] #joins back to the corpus
-corpus["kld_row"] = np.arange(len(corpus))  #position in the chairless sequence
-corpus = corpus.drop(columns=["analysis_order"]) #don't ship two different meanings under one name
+corpus["kld_row"] = np.arange(len(corpus))  
+corpus = corpus.drop(columns=["analysis_order"]) 
 
-#checks
 print("corpus now:", corpus.shape)
 print(corpus["role_tier"].value_counts())
 
@@ -109,7 +106,7 @@ n_speeches = len(corpus)
 n_topics = mixtures.shape[1]  #(rows, columns)
 
 cumulative = np.zeros((n_speeches + 1, n_topics)) #goes down the rows
-np.cumsum(log_mixtures, axis=0, out=cumulative[1:]) #axis=0 accumulates down the speeches, out= avoids a temporary copy
+np.cumsum(log_mixtures, axis=0, out=cumulative[1:]) #axis=0 accumulates down the speeches
 
 print("running totals built:", cumulative.shape)
 print("memory:", round(cumulative.nbytes / 1e6, 1), "MB") #added because of many errors
@@ -123,7 +120,7 @@ def novelty_transience_resonance(scale):
     novelty = np.zeros(len(centres))
     transience = np.zeros(len(centres))
 
-    for chunk_start in range(0, len(centres), chunk_size): #chunked to keep temporaries small
+    for chunk_start in range(0, len(centres), chunk_size): #chunked to keep temporaries 
         chunk_stop = min(chunk_start + chunk_size, len(centres))
         chunk_centres = centres[chunk_start:chunk_stop]
 
@@ -142,7 +139,6 @@ def novelty_transience_resonance(scale):
         transience[chunk_start:chunk_stop] = -centre_entropy - (centre_mixtures * future_mean).sum(axis=1)
 
     resonance = novelty - transience
-
     return centres, novelty, transience, resonance
 
 #=========run every scale=============
