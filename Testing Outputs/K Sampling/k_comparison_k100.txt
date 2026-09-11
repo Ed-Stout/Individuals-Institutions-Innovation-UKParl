@@ -1,0 +1,9 @@
+K: 100
+sample size: 51205
+vocabulary: 10000
+n_iter: 1500
+mean exclusivity: 0.259
+duplicate pairs: 5
+duplicate rate: 0.001
+final log likelihood: -23605812.48053923
+elapsed minutes: 81.7

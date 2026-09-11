@@ -1,0 +1,12 @@
+finished: 2026-09-06 09:13:53
+lda version: 3.0.2
+documents: 357525
+vocabulary: 10000
+total tokens: 19665448
+n_topics: 100
+n_iter: 1500
+alpha: 0.1
+eta: 0.01
+random_state: 42
+elapsed hours: 6.19
+final log likelihood: -168735491.42853454
